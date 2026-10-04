@@ -158,29 +158,46 @@ function startBusfahrer(p){
  loserDeck=newDeck();
  loserCorrect=0;
  loserUsed=0;
- loserCurrent=loserDeck.shift();
- loserUsed=1;
- loserFreshCards=[];
- for(let i=0;i<6 && loserDeck.length;i++) loserFreshCards.push(loserDeck.shift());
- loserUsed+=loserFreshCards.length;
+ busBusy=false;
+ busSlots=[];
+ busRevealed=1;
+ // 1 offene Startkarte + 6 verdeckte Karten.
+ for(let i=0;i<7 && loserDeck.length;i++) busSlots.push(loserDeck.shift());
+ loserUsed=busSlots.length;
+ loserCurrent=busSlots[0];
  renderBusfahrer();
 }
 
-function busCardHTML(c,faceDown=false){
- if(faceDown) return '<div class="bus-card down">?</div>';
- return '<div class="bus-card up"><div class="rank">'+c.r+'</div><div class="suit '+c.c+'">'+c.s+'</div></div>';
+function busRankValue(r){
+ return RANKS.indexOf(r)+7;
+}
+
+function busCardHTML(c,faceDown=false,extraClass=''){
+ if(faceDown) return '<div class="bus-card down '+extraClass+'">?</div>';
+ return '<div class="bus-card up '+extraClass+'"><div class="rank">'+c.r+'</div><div class="suit '+c.c+'">'+c.s+'</div></div>';
 }
 
 function renderBusfahrer(){
- setApp('<div class="screen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status">'+loser+'</div></div><div class="busWrap"><div class="busTitle">'+loser+' ist dran</div><div class="busRow" id="busRow"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Die nächste verdeckte Karte wird nach deiner Wahl aufgedeckt.</div></div>');
+ setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status">'+loser+'</div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busRow" id="busRow"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Die nächste verdeckte Karte wird aufgedeckt.</div></div>');
  const row=document.getElementById("busRow");
- row.innerHTML=busCardHTML(loserCurrent,false);
- loserFreshCards.forEach(c=>row.insertAdjacentHTML("beforeend",busCardHTML(c,true)));
+ for(let i=0;i<7;i++){
+   const c=busSlots[i];
+   if(!c) continue;
+   const open=i<busRevealed;
+   const wrap=document.createElement('div');
+   wrap.style.position='relative';
+   wrap.style.width='45px';
+   wrap.style.height='68px';
+   wrap.style.flex='0 0 45px';
+   wrap.innerHTML=open?busCardHTML(c,false,i===busRevealed-1 && busBusy?'revealed':''):busCardHTML(c,true);
+   row.appendChild(wrap);
+ }
  const choices=document.getElementById("busChoices");
  ["Hoch","Tief"].forEach(v=>{
    const b=document.createElement("button");
    b.className="choice";
    b.textContent=v;
+   b.disabled=busBusy || busRevealed>=7;
    b.onclick=()=>busGuess(v);
    choices.append(b);
  });
@@ -188,55 +205,84 @@ function renderBusfahrer(){
 }
 
 function busGuess(g){
- if(!loserFreshCards.length){
-   alert("Alle ausgelegten Karten wurden gespielt. Busfahrer beendet.");
-   home();
-   return;
- }
+ if(busBusy || busRevealed>=7) return;
+ const nextIndex=busRevealed;
+ const next=busSlots[nextIndex];
+ const current=busSlots[busRevealed-1];
+ if(!next || !current) return;
+ busBusy=true;
+ busRevealed++;
+ loserCurrent=next;
+ renderBusfahrer();
 
- // The next face-down card on the table is the card that gets revealed.
- const next=loserFreshCards.shift();
+ setTimeout(()=>{
+   const a=busRankValue(next.r);
+   const b=busRankValue(current.r);
 
- const a=value(next.r),b=value(loserCurrent.r);
-
- if(a===b){
-   loserUsed++;
-   alert("Gleichstand – 1 Schluck.");
-   // This card is replaced by a fresh face-down card.
-   if(loserDeck.length){
-     loserFreshCards.unshift(loserDeck.shift());
-     loserUsed++;
-   }
-   renderBusfahrer();
-   return;
- }
-
- loserUsed++;
- const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
-
- if(ok){
-   loserCorrect++;
-   loserCurrent=next;
-   if(loserCorrect>=6){
-     alert("6 richtige in Folge – Busfahrer geschafft!");
-     home();
+   // Gleichstand: 1 Schluck. Die gerade aufgedeckte Position wird sofort ersetzt;
+   // die aktuelle offene Vergleichskarte bleibt bestehen.
+   if(a===b){
+     document.getElementById("busInfo").textContent="Gleichstand – 1 Schluck. Neue Karte wird gelegt.";
+     loserCorrect=0;
+     if(loserDeck.length){
+       busSlots[nextIndex]=loserDeck.shift();
+       loserUsed++;
+     }else{
+       busBusy=false;
+       setTimeout(()=>{alert("Das 32-Karten-Deck ist aufgebraucht.");home();},500);
+       return;
+     }
+     busRevealed=nextIndex;
+     loserCurrent=busSlots[nextIndex-1];
+     busBusy=false;
+     setTimeout(renderBusfahrer,500);
      return;
    }
-   // Keep six face-down cards available while cards remain.
-   if(loserDeck.length) loserFreshCards.push(loserDeck.shift());
-   loserUsed++;
- }else{
-   alert("Falsch – 3 Schlücke.");
-   loserCorrect=0;
-   loserCurrent=next;
-   // The three new cards are laid out after a wrong guess.
-   loserFreshCards=[];
-   for(let i=0;i<3 && loserDeck.length;i++){
-     loserFreshCards.push(loserDeck.shift());
-     loserUsed++;
+
+   const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
+
+   if(ok){
+     loserCorrect++;
+     loserCurrent=next;
+
+     if(loserCorrect>=6){
+       busBusy=false;
+       document.getElementById("busInfo").textContent="6 richtige in Folge – Busfahrer geschafft!";
+       document.querySelectorAll("#busChoices button").forEach(b=>b.disabled=true);
+       setTimeout(home,900);
+       return;
+     }
+
+     busBusy=false;
+     setTimeout(renderBusfahrer,500);
+     return;
    }
- }
- renderBusfahrer();
+
+   // Falsch: die erste Startkarte zählt nicht als Schluck.
+   const drinks=busRevealed-1;
+   loserCorrect=0;
+   busBusy=true;
+   document.getElementById("busInfo").textContent="Falsch – "+drinks+" Schlücke.";
+
+   setTimeout(()=>{
+     // Alle bereits aufgedeckten Positionen außer der ersten bekommen neue verdeckte Karten.
+     for(let i=1;i<busRevealed;i++){
+       if(!loserDeck.length) break;
+       busSlots[i]=loserDeck.shift();
+       loserUsed++;
+     }
+     loserCurrent=busSlots[0];
+     busRevealed=1;
+     busBusy=false;
+
+     if(loserDeck.length===0 && loserUsed>=32){
+       renderBusfahrer();
+       setTimeout(()=>{alert("Das 32-Karten-Deck ist aufgebraucht.");home();},700);
+       return;
+     }
+     renderBusfahrer();
+   },700);
+ },700);
 }
 
 function showRules(){
