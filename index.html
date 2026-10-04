@@ -78,13 +78,46 @@ function hideAll(){document.querySelectorAll('section').forEach(x=>x.classList.a
 function goHome(){hideAll();home.classList.remove('hidden')}
 function showSetup(){hideAll();setup.classList.remove('hidden');names.innerHTML='';['Spieler 1','Spieler 2'].forEach(x=>addName(x))}
 function addName(v=''){if(document.querySelectorAll('#names input').length>=8)return;let d=document.createElement('div');d.className='nameRow';d.innerHTML=`<input placeholder="Name" value="${v}"><button class="remove" onclick="this.parentElement.remove()">×</button>`;names.appendChild(d)}
-function startMain(){let ns=[...document.querySelectorAll('#names input')].map(x=>x.value.trim()).filter(Boolean);if(ns.length<2){alert('Mindestens 2 Spieler.');return}players=ns.map(name=>({name,king:false,dame:false}));turn=0;kings=0;activeKing=-1;activeDame=-1;fuckoff=false;makeDeck();hideAll();mainGame.classList.remove('hidden');renderMain()}
-function makeDeck(){deck=[];for(let s of suits)for(let r of ranks)deck.push({r,s}) ;for(let i=deck.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]]}}
+let mainSlots=[], mainRevealedIndex=-1, mainBusy=false;
+function startMain(){let ns=[...document.querySelectorAll('#names input')].map(x=>x.value.trim()).filter(Boolean);if(ns.length<2){alert('Mindestens 2 Spieler.');return}players=ns.map(name=>({name,king:false,dame:false}));turn=0;kings=0;activeKing=-1;activeDame=-1;fuckoff=false;makeDeck();mainSlots=[...deck];deck=[];mainRevealedIndex=-1;mainBusy=false;hideAll();mainGame.classList.remove('hidden');renderMain()}
+function makeDeck(){deck=[];for(let s of suits)for(let r of ranks)deck.push({r,s});for(let i=deck.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]]}}
 function cardText(c){return c.r+c.s}
 function red(c){return c.s==='♥'||c.s==='♦'}
-function renderMain(){turn%=players.length;document.getElementById('turn').textContent=players[turn].name;document.getElementById('statuses').textContent=(fuckoff?'Fuckoff aktiv':'')+(activeKing>=0?' · König: '+players[activeKing].name:'')+(activeDame>=0?' · Dame: '+players[activeDame].name:'');let ring=document.getElementById('mainRing');ring.innerHTML='';let n=deck.length;deck.forEach((c,i)=>{let b=document.createElement('button');b.className='mainCard back';let a=i*360/n-90,rad=Math.min(170,window.innerWidth*.34),x=Math.cos(a*Math.PI/180)*rad,y=Math.sin(a*Math.PI/180)*rad;b.style.transform=`translate(${x}px,${y}px)`;b.onclick=()=>drawMain(i,b);ring.appendChild(b)})}
-function drawMain(i,b){let c=deck[i];b.classList.remove('back');b.textContent=cardText(c);setTimeout(()=>{largeInner.textContent=cardText(c);largeCard.style.display='flex';setTimeout(()=>{largeCard.style.display='none';b.remove();deck.splice(i,1);applyCard(c);turn=(turn+1)%players.length;renderMain()},2000)},80)}
+function renderMain(){
+  turn%=players.length;
+  document.getElementById('turn').textContent=players[turn].name;
+  document.getElementById('statuses').textContent=(fuckoff?'Fuckoff aktiv':'')+(activeKing>=0?' · König: '+players[activeKing].name:'')+(activeDame>=0?' · Dame: '+players[activeDame].name:'');
+  let ring=document.getElementById('mainRing'); ring.innerHTML='';
+  let n=mainSlots.length;
+  mainSlots.forEach((c,i)=>{
+    if(!c)return;
+    let b=document.createElement('button');
+    b.className='mainCard '+(i===mainRevealedIndex?'':'back');
+    if(i===mainRevealedIndex)b.textContent=cardText(c);
+    let a=i*360/n-90,rad=Math.min(170,window.innerWidth*.34),x=Math.cos(a*Math.PI/180)*rad,y=Math.sin(a*Math.PI/180)*rad;
+    b.style.transform=`translate(${x}px,${y}px)`;
+    if(i!==mainRevealedIndex && !mainBusy)b.onclick=()=>drawMain(i);
+    ring.appendChild(b);
+  });
+}
+function drawMain(i){
+  if(mainBusy || !mainSlots[i])return;
+  mainBusy=true;
+  if(mainRevealedIndex>=0)mainRevealedIndex=-1;
+  let c=mainSlots[i];
+  mainRevealedIndex=i;
+  renderMain();
+  setTimeout(()=>{
+    largeInner.textContent=cardText(c);largeCard.style.display='flex';
+    setTimeout(()=>{
+      largeCard.style.display='none';mainBusy=false;applyCard(c);
+      if(!mainGame.classList.contains('hidden'))turn=(turn+1)%players.length;
+      renderMain();
+    },2000);
+  },80);
+}
 function applyCard(c){let val=['7','8','9','10','B','D','K','A'].indexOf(c.r)+7;if(c.r==='10')fuckoff=true;if(c.r==='B'){} if(c.r==='D'){if(activeDame>=0)players[activeDame].dame=false;activeDame=turn;players[turn].dame=true}if(c.r==='K'){kings++;activeKing=turn;players[turn].king=true;if(kings>=4){startBusfahrer(players[turn].name);return}}}
+
 function showRules(){rulesOverlay.classList.remove('hidden')}
 function closeRules(){rulesOverlay.classList.add('hidden')}
 function confirmEnd(){if(confirm('Spiel wirklich beenden?'))goHome()}
