@@ -1,259 +1,250 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Fack Off</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#111;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
-button{font:inherit}.screen{min-height:100vh;padding:22px 16px 30px;display:flex;flex-direction:column}.hidden{display:none}
-h1{font-size:42px;text-align:center;margin:18px 0 30px}.menu{display:flex;flex-direction:column;gap:14px;max-width:420px;width:100%;margin:auto}
-.btn{border:0;border-radius:16px;padding:17px 18px;background:#292929;color:#fff;font-size:20px;font-weight:700}
-.btn.primary{background:#fff;color:#111}.btn.danger{background:#6b1717}.back{background:none;border:0;color:#fff;font-size:34px;text-align:left;padding:0 4px}
-input{width:100%;padding:15px;border-radius:12px;border:0;font-size:18px;margin-bottom:10px}.names{max-width:420px;width:100%;margin:0 auto}.nameRow{display:flex;gap:8px}.nameRow input{margin:0}.remove{width:50px;border:0;border-radius:12px;background:#5b2222;color:#fff;font-size:22px}
-.small{opacity:.7;text-align:center;font-size:14px}.rulebox{background:#1d1d1d;border-radius:14px;padding:15px;margin:7px 0}.rulebox b{display:block;margin-bottom:4px}
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif}
+button,input{font:inherit}
+.screen{min-height:100vh;padding:22px 16px 30px;display:flex;flex-direction:column;align-items:center}
+h1{font-size:48px;letter-spacing:1px;margin:70px 0 42px}
+h2{margin:12px 0 20px}
+.btn{width:min(390px,94vw);border:0;border-radius:15px;padding:16px 20px;margin:7px 0;background:#fff;color:#111;font-weight:700;font-size:19px}
+.btn.dark{background:#303034;color:#fff}
+.input{width:min(390px,94vw);padding:15px;margin:6px 0;border-radius:13px;border:1px solid #555;background:#202023;color:#fff}
+.small{font-size:13px;color:#aaa;text-align:center}
+.top{width:100%;display:flex;align-items:flex-start;gap:10px}
+.backArrow{width:34px;height:34px;padding:0;border:0;border-radius:10px;background:#303034;color:#fff;font-size:28px;line-height:30px;flex-shrink:0}
+.top .turn{flex:1}
+.turn{font-size:22px;font-weight:800}
+.status{font-size:12px;color:#aaa;text-align:right;line-height:1.5}
+.board{position:relative;width:min(94vw,650px);height:min(94vw,650px);margin:8px auto}
+.card{position:absolute;width:46px;height:68px;border-radius:8px;border:1px solid #777;background:linear-gradient(135deg,#333,#111);box-shadow:0 3px 9px #000;transform:translate(-50%,-50%);cursor:pointer;padding:0}
+.card.face{background:#f8f8f8;color:#111;border:2px solid #ddd}
+.card .rank{position:absolute;top:3px;left:5px;font-size:11px;font-weight:800}
+.card .suit{position:absolute;left:0;right:0;top:20px;text-align:center;font-size:20px}
+.red{color:#c22}.black{color:#111}
+.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#777;font-size:13px;pointer-events:none}
+.overlay{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;z-index:20}
+.big{width:min(72vw,300px);height:min(92vw,430px);border-radius:24px;background:#fafafa;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 15px 55px #000}
+.big .rank{font-size:78px;font-weight:900}.big .suit{font-size:70px}.big .action{font-size:19px;font-weight:700;text-align:center;padding:18px}
+.rules{width:min(720px,96vw);line-height:1.45}.rules h3{margin:20px 0 5px}.rules p{color:#ddd;margin:6px 0}
+.list{width:min(500px,94vw)}.choice{width:100%;background:#252527;color:#fff;border:1px solid #444;border-radius:13px;padding:14px;margin:5px 0}.choice.active{border-color:#fff}
+.busWrap{width:min(760px,96vw);margin:18px auto;text-align:center}
+.busTitle{font-size:20px;font-weight:800;margin-bottom:16px}
+.busRow{display:flex;justify-content:flex-start;align-items:center;gap:8px;min-height:112px;overflow-x:auto;padding:6px 2px}
+.bus-card{flex:0 0 66px;width:66px;height:96px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px #000}
+.bus-card.up{background:#fafafa;color:#111}
+.bus-card.down{background:linear-gradient(135deg,#333,#111);border:1px solid #777;color:#aaa;font-size:28px;font-weight:900}.bus-card.up{margin-right:10px}
+.bus-card .rank{font-size:34px;font-weight:900;line-height:1}
+.bus-card .suit{font-size:34px;line-height:1;margin-top:5px}
 
-#mainGame{padding:12px}.topbar{display:flex;justify-content:space-between;align-items:center}.turn{text-align:center;font-weight:800;font-size:20px}.status{font-size:12px;opacity:.8;text-align:center;margin-top:3px}.table{position:relative;height:58vh;min-height:400px;margin-top:8px}.ring{position:absolute;inset:15px 0;display:flex;align-items:center;justify-content:center}.mainCard{position:absolute;width:34px;height:50px;border-radius:7px;background:#f5f5f5;color:#111;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;box-shadow:0 4px 12px #0008;border:2px solid #333;cursor:pointer;transition:.15s}
-.mainCard.back{background:#111;color:#fff}.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}.activeKing,.activeDame{font-size:12px;opacity:.85;margin:4px}
-#largeCard{position:fixed;inset:0;background:#111e;display:none;align-items:center;justify-content:center;z-index:20}.largeInner{width:min(76vw,340px);aspect-ratio:2/3;border-radius:24px;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:76px;font-weight:900;box-shadow:0 15px 50px #000}.overlay{position:fixed;inset:0;background:#000d;z-index:30;padding:20px;overflow:auto}.panel{max-width:520px;margin:30px auto;background:#1c1c1c;border-radius:18px;padding:20px}
-
-.busTop{text-align:center}.busTitle{font-size:28px;font-weight:900;margin:5px}.busInfo{opacity:.75;font-size:14px}.busBoard{height:260px;display:flex;align-items:center;justify-content:center;gap:5px;margin:18px auto;overflow:visible;width:100%;padding:0 8px}.busSlot{width:45px;height:68px;position:relative;flex:0 0 45px}.busCard{position:absolute;width:45px;height:68px;border-radius:8px;border:2px solid #333;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;box-shadow:0 4px 10px #0008}.busCard.back{background:#8b1111;color:#fff}.busCard.layer{transform:translate(4px,-3px) rotate(1.5deg)}.busCard.layer2{transform:translate(8px,-5px) rotate(-1.5deg)}
-.choice{display:flex;gap:12px;justify-content:center}.choice .btn{width:45%}.equalBtn{display:block;margin:10px auto 0;width:92%;background:#333}
-.drink{text-align:center;font-size:17px;font-weight:800;min-height:25px}.sequence{font-size:12px;opacity:.6;text-align:center}
 </style>
 </head>
 <body>
-
-<section id="home" class="screen">
-<h1>Fack Off</h1>
-<div class="menu">
-<button class="btn primary" onclick="showSetup()">Neues Spiel</button>
-<button class="btn" onclick="startBusfahrerStandalone()">Busfahrer</button>
-<button class="btn" onclick="showRules()">Regeln</button>
-</div>
-</section>
-
-<section id="setup" class="screen hidden">
-<button class="back" onclick="goHome()">‹</button><h1>Spieler</h1>
-<div class="names" id="names"></div>
-<div class="names">
-<button class="btn" style="width:100%;margin:5px 0 14px" onclick="addName()">+ Spieler</button>
-<button class="btn primary" style="width:100%" onclick="startMain()">Spiel starten</button>
-</div>
-<p class="small">2–8 Spieler</p>
-</section>
-
-<section id="mainGame" class="screen hidden">
-<div class="topbar"><button class="back" onclick="confirmEnd()">‹</button><div><div id="turn" class="turn"></div><div id="statuses" class="status"></div></div><button class="btn" style="padding:7px 11px;font-size:14px" onclick="showRules()">Regeln</button></div>
-<div class="table"><div id="mainRing" class="ring"></div><div class="center"><div class="activeKing" id="kingStatus"></div><div class="activeDame" id="dameStatus"></div></div></div>
-</section>
-
-<section id="busGame" class="screen hidden">
-<div class="busTop"><button class="back" style="position:absolute;left:10px;top:8px" onclick="confirmBusEnd()">‹</button>
-<div class="busTitle">Busfahrer</div><div id="busPlayer" class="busInfo"></div></div>
-<div id="busBoard" class="busBoard"></div>
-<div id="busPrompt" class="drink"></div>
-<div class="choice"><button class="btn primary" onclick="busGuess('high')">HOCH</button><button class="btn primary" onclick="busGuess('low')">TIEF</button></div>
-<button class="btn equalBtn" onclick="busEqual()">GLEICH</button>
-<p class="sequence" id="busSequence"></p>
-</section>
-
-<div id="largeCard"><div id="largeInner" class="largeInner"></div></div>
-<div id="rulesOverlay" class="overlay hidden"><div class="panel"><button class="back" onclick="closeRules()">‹</button><h2>Regeln</h2>
-<div class="rulebox"><b>7 / 8 / 9</b>Rot: so viele Schlücke verteilen. Schwarz: selbst trinken.</div>
-<div class="rulebox"><b>10 – Fuckoff</b>Ab der 10 gilt die „Fuckoff“-Namensregel bis zum 4. König. Sagt jemand einen echten Namen, trinkt diese Person.</div>
-<div class="rulebox"><b>Bube</b>Wer zieht, erfindet mündlich eine neue Regel. Regeln bleiben bestehen.</div>
-<div class="rulebox"><b>Dame – Daumenspiel</b>Eine Dame ist aktiv. Der Spieler legt unauffällig den Daumen auf den Tisch; wer es bemerkt, macht mit. Wer zuletzt ist, trinkt. Eine neue Dame beendet die alte und wird aktiv.</div>
-<div class="rulebox"><b>König – Questenmaster</b>1.–3. König: Der König stellt Fragen; wer antwortet, trinkt. Die Rolle wandert weiter. Der 4. König beendet das Hauptspiel und startet Busfahrer.</div>
-<div class="rulebox"><b>Ass</b>4 Schlücke. Rot verteilt, schwarz selbst.</div>
-<div class="rulebox"><b>Busfahrer</b>Eine offene Startkarte + 6 verdeckte Karten. Hoch/Tief entscheidet die nächste Karte. Richtig: weiter. Gleich: 1 Schluck und neue verdeckte Karte auf die letzte offene Position. Falsch: so viele Schlücke wie die Anzahl der bisher aufgedeckten Karten; auf jede bisher offene Karte kommt eine neue verdeckte Karte, die locker darüberliegt. Die Startkarte bleibt sichtbar.</div>
-</div></div>
-
+<div id="app"></div>
 <script>
-const ranks=['7','8','9','10','B','D','K','A'], suits=['♥','♦','♣','♠'];
-let players=[], turn=0, deck=[], kings=0, activeKing=-1, activeDame=-1, fuckoff=false;
-let bus={player:'',deck:[],slots:[],revealed:1,streak:0,message:'',active:true};
+const SUITS=[["♥","red"],["♦","red"],["♣","black"],["♠","black"]];
+const RANKS=["7","8","9","10","B","D","K","A"];
+let players=[],current=0,deck=[],revealed=null,kingCount=0,kingHolder=null,activeDame=null;
+let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0,loserUsed=0,loserFreshCards=[];
 
-function hideAll(){document.querySelectorAll('section').forEach(x=>x.classList.add('hidden'))}
-function goHome(){hideAll();home.classList.remove('hidden')}
-function showSetup(){hideAll();setup.classList.remove('hidden');names.innerHTML='';['Spieler 1','Spieler 2'].forEach(x=>addName(x))}
-function addName(v=''){if(document.querySelectorAll('#names input').length>=8)return;let d=document.createElement('div');d.className='nameRow';d.innerHTML=`<input placeholder="Name" value="${v}"><button class="remove" onclick="this.parentElement.remove()">×</button>`;names.appendChild(d)}
-let mainSlots=[], mainRevealedIndex=-1, mainBusy=false;
-function startMain(){let ns=[...document.querySelectorAll('#names input')].map(x=>x.value.trim()).filter(Boolean);if(ns.length<2){alert('Mindestens 2 Spieler.');return}players=ns.map(name=>({name,king:false,dame:false}));turn=0;kings=0;activeKing=-1;activeDame=-1;fuckoff=false;makeDeck();mainSlots=[...deck];deck=[];mainRevealedIndex=-1;mainBusy=false;hideAll();mainGame.classList.remove('hidden');renderMain()}
-function makeDeck(){deck=[];for(let s of suits)for(let r of ranks)deck.push({r,s});for(let i=deck.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]]}}
-function cardText(c){return c.r+c.s}
-function red(c){return c.s==='♥'||c.s==='♦'}
+function setApp(html){document.getElementById("app").innerHTML=html}
+function makeButton(text,fn,dark=false){const b=document.createElement("button");b.className="btn"+(dark?" dark":"");b.textContent=text;b.onclick=fn;return b}
+
+function home(){
+ setApp('<div class="screen"><h1>Fack Off</h1><div id="homeButtons"></div><p class="small">Testversion</p></div>');
+ const b=document.getElementById("homeButtons");
+ b.append(makeButton("Neues Spiel",setup));
+ b.append(makeButton("Busfahrer",busfahrerSetup));
+ b.append(makeButton("Regeln",showRules,true));
+}
+
+function setup(){
+ setApp('<div class="screen"><h2>Neues Spiel</h2><p class="small">2–8 Spieler</p><div id="names"></div><div id="start"></div><div id="back"></div></div>');
+ const names=document.getElementById("names");
+ for(let i=0;i<8;i++){const x=document.createElement("input");x.className="input";x.placeholder="Spieler "+(i+1);x.id="p"+i;if(i>1)x.style.display="none";names.append(x)}
+ const row=document.createElement("div");row.className="row";
+ for(let n=2;n<=8;n++){const b=document.createElement("button");b.className="choice"+(n===2?" active":"");b.textContent=n+" Spieler";b.onclick=()=>{document.querySelectorAll("#names .input").forEach((x,i)=>x.style.display=i<n?"block":"none");document.querySelectorAll(".choice").forEach(x=>x.classList.remove("active"));b.classList.add("active")};row.append(b)}
+ names.prepend(row);
+ document.getElementById("start").append(makeButton("Spiel starten",()=>{players=[];for(let i=0;i<8;i++){const x=document.getElementById("p"+i);if(x.style.display!=="none")players.push(x.value.trim()||"Spieler "+(i+1))}startMain()}));
+ document.getElementById("back").append(makeButton("Zurück",home,true));
+}
+
+function newDeck(){const a=[];for(const r of RANKS)for(const [s,c] of SUITS)a.push({r,s,c,id:Math.random()});return a.sort(()=>Math.random()-.5)}
+
+function startMain(){current=0;deck=newDeck();revealed=null;kingCount=0;kingHolder=null;activeDame=null;renderMain()}
+
+function cardText(c){
+ if("789".includes(c.r)){const n=+c.r;return c.c==="red"?n+" Schlücke verteilen":n+" Schlücke selbst"}
+ if(c.r==="10")return"FACKOFF – Namensregel";
+ if(c.r==="B")return"BUBE – Neue Regel erstellen";
+ if(c.r==="D")return"DAME – Daumenspiel";
+ if(c.r==="K")return kingCount<4?"KÖNIG – Fragen stellen":"4. KÖNIG – Spiel beendet";
+ if(c.r==="A")return c.c==="red"?"4 Schlücke verteilen":"4 Schlücke selbst";
+ return"";
+}
+
 function renderMain(){
-  turn%=players.length;
-  document.getElementById('turn').textContent=players[turn].name;
-  document.getElementById('statuses').textContent=(fuckoff?'Fuckoff aktiv':'')+(activeKing>=0?' · König: '+players[activeKing].name:'')+(activeDame>=0?' · Dame: '+players[activeDame].name:'');
-  let ring=document.getElementById('mainRing'); ring.innerHTML='';
-  let n=mainSlots.length;
-  mainSlots.forEach((c,i)=>{
-    if(!c)return;
-    let b=document.createElement('button');
-    b.className='mainCard '+(i===mainRevealedIndex?'':'back');
-    if(i===mainRevealedIndex)b.textContent=cardText(c);
-    let a=i*360/n-90,rx=Math.min(150,window.innerWidth*.40),ry=225,x=Math.cos(a*Math.PI/180)*rx,y=Math.sin(a*Math.PI/180)*ry;
-    b.style.transform=`translate(${x}px,${y}px)`;
-    if(i!==mainRevealedIndex && !mainBusy)b.onclick=()=>drawMain(i);
-    ring.appendChild(b);
-  });
-}
-function drawMain(i){
-  if(mainBusy || !mainSlots[i])return;
-  mainBusy=true;
-  if(mainRevealedIndex>=0)mainRevealedIndex=-1;
-  let c=mainSlots[i];
-  mainRevealedIndex=i;
-  renderMain();
-  setTimeout(()=>{
-    largeInner.textContent=cardText(c);largeCard.style.display='flex';
-    setTimeout(()=>{
-      largeCard.style.display='none';mainBusy=false;applyCard(c);
-      if(!mainGame.classList.contains('hidden'))turn=(turn+1)%players.length;
-      renderMain();
-    },2000);
-  },80);
-}
-function applyCard(c){let val=['7','8','9','10','B','D','K','A'].indexOf(c.r)+7;if(c.r==='10')fuckoff=true;if(c.r==='B'){} if(c.r==='D'){if(activeDame>=0)players[activeDame].dame=false;activeDame=turn;players[turn].dame=true}if(c.r==='K'){kings++;activeKing=turn;players[turn].king=true;if(kings>=4){startBusfahrer(players[turn].name);return}}}
-
-function showRules(){rulesOverlay.classList.remove('hidden')}
-function closeRules(){rulesOverlay.classList.add('hidden')}
-function confirmEnd(){if(confirm('Spiel wirklich beenden?'))goHome()}
-function confirmBusEnd(){if(confirm('Busfahrer wirklich beenden?'))goHome()}
-function startBusfahrer(name){
-  bus.player=name;
-  bus.deck=[];
-  for(let s of suits)for(let r of ranks)bus.deck.push({r,s});
-  for(let i=bus.deck.length-1;i>0;i--){
-    let j=Math.floor(Math.random()*(i+1));
-    [bus.deck[i],bus.deck[j]]=[bus.deck[j],bus.deck[i]];
-  }
-
-  // 1 offene Startkarte + 6 verdeckte Karten.
-  bus.slots=[bus.deck.shift()];
-  for(let i=1;i<7;i++) bus.slots.push(bus.deck.shift());
-
-  bus.revealed=1;
-  bus.streak=0;
-  bus.message='';
-  bus.active=true;
-  hideAll();
-  busGame.classList.remove('hidden');
-  renderBus();
+ setApp('<div class="screen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div id="turn" class="turn"></div><div id="status" class="status"></div></div><div id="board" class="board"></div><div id="actions"></div></div>');
+ document.getElementById("turn").textContent=players[current]+" ist dran";
+ document.getElementById("status").innerHTML=(kingHolder?"König – "+kingHolder+"<br>":"")+(activeDame?'<button style="background:none;border:0;color:#aaa;padding:0;font-size:12px" onclick="clearDame()">Dame – '+activeDame+'</button>':"");
+ const b=document.getElementById("board"),active=deck.filter(c=>!c.removed),cx=b.clientWidth/2,cy=b.clientHeight/2,rx=b.clientWidth*.39,ry=b.clientHeight*.39;
+ active.forEach((c,i)=>{const a=i/active.length*Math.PI*2-Math.PI/2,x=document.createElement("button");x.className="card"+(c===revealed?" face":"");x.style.left=(cx+Math.cos(a)*rx)+"px";x.style.top=(cy+Math.sin(a)*ry)+"px";x.style.transform="translate(-50%,-50%) rotate("+(a*180/Math.PI+90)+"deg)";if(c===revealed)x.innerHTML='<span class="rank">'+c.r+'</span><span class="suit '+c.c+'">'+c.s+'</span>';x.onclick=()=>drawMain(c);b.append(x)});
+ const center=document.createElement("div");center.className="center";center.textContent=active.length+" Karten";b.append(center);
+ document.getElementById("actions").append(makeButton("Regeln",showRules,true));
 }
 
-function startBusfahrerStandalone(){startBusfahrer('Busfahrer')}
+function endGame(){
+ if(confirm("Laufendes Spiel wirklich beenden?")) home();
+}
 
-function compare(a,b){
-  let av=ranks.indexOf(a.r), bv=ranks.indexOf(b.r);
-  return bv>av?'high':bv<av?'low':'equal';
+function drawMain(c){
+ if(revealed)revealed.removed=true;
+ revealed=c;
+ if(c.r==="D")activeDame=players[current];
+ if(c.r==="K"){kingCount++;kingHolder=players[current]}
+ showBig(c,()=>{
+   if(c.r==="K"&&kingCount>=4){chooseLoser();return}
+   current=(current+1)%players.length;renderMain();
+ });
+}
+
+function showBig(c,done){
+ const o=document.createElement("div");o.className="overlay";
+ const b=document.createElement("div");b.className="big";
+ b.innerHTML='<div class="rank">'+c.r+'</div><div class="suit '+c.c+'">'+c.s+'</div><div class="action">'+cardText(c)+'</div>';
+ o.append(b);document.body.append(o);
+ setTimeout(()=>{o.remove();done()},2000);
+}
+
+function clearDame(){activeDame=null;renderMain()}
+
+function chooseLoser(){
+ setApp('<div class="screen"><h2>Busfahrer</h2><p class="small">Der 4. König ist gezogen. Jetzt wird der Verlierer bestimmt.</p><p class="small">Wer laut der gespielten Bube-Regel verloren hat, spielt Busfahrer.</p><div id="loserList" class="list"></div><div id="back"></div></div>');
+ const l=document.getElementById("loserList");
+ players.forEach(p=>{
+   const b=document.createElement("button");
+   b.className="choice";
+   b.textContent=p;
+   b.onclick=()=>startBusfahrer(p);
+   l.append(b);
+ });
+ document.getElementById("back").append(makeButton("Hauptmenü",home,true));
+}
+
+function busfahrerSetup(){
+ players=["Spieler 1"];
+ startBusfahrer("Spieler 1");
+}
+
+function chooseBusfahrerPlayer(){
+ setApp('<div class="screen"><h2>Wer fährt Bus?</h2><p class="small">Wähle den Spieler für das Busfahrer-Spiel.</p><div id="busList" class="list"></div><div id="back"></div></div>');
+ const l=document.getElementById("busList");
+ players.forEach(p=>{
+   const b=document.createElement("button");
+   b.className="choice";
+   b.textContent=p;
+   b.onclick=()=>startBusfahrer(p);
+   l.append(b);
+ });
+ document.getElementById("back").append(makeButton("Zurück",home,true));
+}
+
+function startBusfahrer(p){
+ loser=p;
+ loserDeck=newDeck();
+ loserCorrect=0;
+ loserUsed=0;
+ loserCurrent=loserDeck.shift();
+ loserUsed=1;
+ loserFreshCards=[];
+ for(let i=0;i<6 && loserDeck.length;i++) loserFreshCards.push(loserDeck.shift());
+ loserUsed+=loserFreshCards.length;
+ renderBusfahrer();
+}
+
+function busCardHTML(c,faceDown=false){
+ if(faceDown) return '<div class="bus-card down">?</div>';
+ return '<div class="bus-card up"><div class="rank">'+c.r+'</div><div class="suit '+c.c+'">'+c.s+'</div></div>';
+}
+
+function renderBusfahrer(){
+ setApp('<div class="screen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status">'+loser+'</div></div><div class="busWrap"><div class="busTitle">'+loser+' ist dran</div><div class="busRow" id="busRow"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Die nächste verdeckte Karte wird nach deiner Wahl aufgedeckt.</div></div>');
+ const row=document.getElementById("busRow");
+ row.innerHTML=busCardHTML(loserCurrent,false);
+ loserFreshCards.forEach(c=>row.insertAdjacentHTML("beforeend",busCardHTML(c,true)));
+ const choices=document.getElementById("busChoices");
+ ["Hoch","Tief"].forEach(v=>{
+   const b=document.createElement("button");
+   b.className="choice";
+   b.textContent=v;
+   b.onclick=()=>busGuess(v);
+   choices.append(b);
+ });
+ document.getElementById("busProgress").textContent=loserCorrect+" von 6 richtig · "+loserUsed+" von 32 Karten verwendet";
 }
 
 function busGuess(g){
-  if(!bus.active)return;
+ if(!loserFreshCards.length){
+   alert("Alle ausgelegten Karten wurden gespielt. Busfahrer beendet.");
+   home();
+   return;
+ }
 
-  // Nächste verdeckte Karte an genau ihrer Position aufdecken.
-  let next=bus.slots[bus.revealed];
-  if(!next){
-    finishBus();
-    return;
-  }
+ // The next face-down card on the table is the card that gets revealed.
+ const next=loserFreshCards.shift();
 
-  let current=bus.slots[bus.revealed-1];
-  let res=compare(current,next);
+ const a=value(next.r),b=value(loserCurrent.r);
 
-  bus.revealed++;
+ if(a===b){
+   loserUsed++;
+   alert("Gleichstand – 1 Schluck.");
+   // This card is replaced by a fresh face-down card.
+   if(loserDeck.length){
+     loserFreshCards.unshift(loserDeck.shift());
+     loserUsed++;
+   }
+   renderBusfahrer();
+   return;
+ }
 
-  if(res===g){
-    bus.streak++;
-    bus.message='Richtig!';
-    renderBus();
+ loserUsed++;
+ const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
 
-    // Erst nach 6 richtigen hintereinander ist der Busfahrer geschafft.
-    if(bus.streak>=6){
-      finishBus();
-      return;
-    }
-
-    // Sind keine Karten mehr im Nachziehstapel, ist das Spiel vorbei.
-    if(bus.deck.length===0){
-      finishBus();
-    }
-    return;
-  }
-
-  // Falsch: die erste Startkarte zählt NICHT als Schluck.
-  const drinks=bus.revealed-1;
-  bus.streak=0;
-  bus.message=`Falsch! ${drinks} Schlücke.`;
-
-  // Alle bisher aufgedeckten Positionen außer der ersten
-  // bekommen neue verdeckte Karten.
-  for(let i=1;i<bus.revealed;i++){
-    if(bus.deck.length===0) break;
-    bus.slots[i]=bus.deck.shift();
-  }
-
-  // Danach immer wieder ganz vorne bei der ersten Karte beginnen.
-  bus.revealed=1;
-  renderBus();
-
-  if(bus.deck.length===0){
-    finishBus();
-  }
+ if(ok){
+   loserCorrect++;
+   loserCurrent=next;
+   if(loserCorrect>=6){
+     alert("6 richtige in Folge – Busfahrer geschafft!");
+     home();
+     return;
+   }
+   // Keep six face-down cards available while cards remain.
+   if(loserDeck.length) loserFreshCards.push(loserDeck.shift());
+   loserUsed++;
+ }else{
+   alert("Falsch – 3 Schlücke.");
+   loserCorrect=0;
+   loserCurrent=next;
+   // The three new cards are laid out after a wrong guess.
+   loserFreshCards=[];
+   for(let i=0;i<3 && loserDeck.length;i++){
+     loserFreshCards.push(loserDeck.shift());
+     loserUsed++;
+   }
+ }
+ renderBusfahrer();
 }
 
-function busEqual(){
-  if(!bus.active)return;
-
-  // Gleichstand: 1 Schluck.
-  bus.message='Gleich – 1 Schluck.';
-  bus.streak=0;
-
-  // Eine neue verdeckte Karte kommt auf die Position der letzten offenen Karte.
-  if(bus.deck.length===0){
-    renderBus();
-    finishBus();
-    return;
-  }
-
-  bus.slots[bus.revealed-1]=bus.deck.shift();
-  renderBus();
+function showRules(){
+ setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Busfahrer</h3><p>Der 4. König aktiviert Busfahrer. Der Verlierer spielt mit einem neu gemischten 32-Karten-Deck. Eine Karte liegt offen, sechs Karten liegen verdeckt bereit. Für jede nächste Karte wird Hoch oder Tief geraten. 6 richtige in Folge schaffen. Falsche Ansage: 3 Schlücke und 3 neue Karten werden ausgelegt. Gleichstand: 1 Schluck; die neue Karte bleibt aus dem Deck und die aktuelle Vergleichskarte bleibt bestehen. Alle gespielten Karten bleiben aus dem verfügbaren Deck.</p></div></div>');
+ const s=document.querySelector(".screen");s.append(makeButton("Zurück",players.length?renderMain:home,true));
 }
 
-function renderBus(){
-  let board=document.getElementById('busBoard');
-  board.innerHTML='';
-
-  for(let i=0;i<7;i++){
-    let slot=document.createElement('div');
-    slot.className='busSlot';
-
-    let card=document.createElement('div');
-    card.className='busCard '+(i<bus.revealed?'':'back');
-    card.textContent=i<bus.revealed?cardText(bus.slots[i]):'';
-    slot.appendChild(card);
-
-    board.appendChild(slot);
-  }
-
-  document.getElementById('busPlayer').textContent=bus.player;
-  document.getElementById('busPrompt').textContent=bus.message;
-  document.getElementById('busSequence').textContent=
-    `${bus.streak} von 6 richtig · ${bus.deck.length} Karten verbleiben`;
-}
-
-function finishBus(){
-  bus.active=false;
-  bus.message=bus.streak>=6
-    ? 'Busfahrer geschafft!'
-    : 'Alle 32 Karten wurden verwendet.';
-  renderBus();
-
-  document.querySelectorAll('#busGame .choice button,#busGame .equalBtn')
-    .forEach(b=>b.disabled=true);
-}
+home();
 </script>
-</body></html>
+</body>
+</html>
