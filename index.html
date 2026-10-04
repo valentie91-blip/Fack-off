@@ -206,7 +206,7 @@ function chooseBusfahrerPlayer(){
 
 function startBusfahrer(p){
  loser=p;
- loserDeck=newDeck();
+ loserDeck=newDeck();                 // exactly one shuffle at the start
  loserCorrect=0;
  loserUsed=0;
  loserCurrent=loserDeck.shift();
@@ -215,8 +215,11 @@ function startBusfahrer(p){
  busRoundCount=6;
  busPlayed=[];
  loserFreshCards=[];
- for(let i=0;i<6 && loserDeck.length;i++) loserFreshCards.push(loserDeck.shift());
- loserUsed+=loserFreshCards.length;
+
+ for(let i=0;i<6 && loserDeck.length;i++){
+   loserFreshCards.push(loserDeck.shift());
+ }
+ loserUsed=1+loserFreshCards.length;
  renderBusfahrer();
 }
 
@@ -244,94 +247,116 @@ function renderBusfahrer(){
    b.onclick=()=>busGuess(v);
    choices.append(b);
  });
- document.getElementById("busProgress").textContent=loserFreshCards.length+" verdeckte Karten · "+loserUsed+" von 32 Karten verwendet";
+
+ document.getElementById("busProgress").textContent =
+   loserFreshCards.length+" verdeckte Karten · "+loserUsed+" von 32 Karten verwendet";
+}
+
+function busFinishIfNoCards(){
+ if(loserFreshCards.length===0 && loserDeck.length===0){
+   alert("Das komplette 32-Karten-Deck ist aufgebraucht. Busfahrer geschafft!");
+   home();
+   return true;
+ }
+ return false;
 }
 
 function busGuess(g){
- if(busBusy || !loserFreshCards.length) return;
+ if(busBusy || loserFreshCards.length===0) return;
  busBusy=true;
 
+ // The next card is consumed from the fixed, already-shuffled deck.
  const next=loserFreshCards.shift();
- const fresh=document.getElementById("busFresh");
- const hidden=fresh ? fresh.querySelector(".bus-card.down") : null;
+ loserUsed++;
 
- if(hidden){
-   hidden.className="bus-card up revealed";
-   hidden.innerHTML=busCardHTML(next,false).replace(/^<div class="bus-card up">|<\/div>$/g,"");
- }
- document.querySelectorAll("#busChoices button").forEach(b=>b.disabled=true);
- document.getElementById("busInfo").textContent="Karte wird aufgedeckt …";
+ const a=value(next.r);
+ const b=value(loserCurrent.r);
 
- setTimeout(()=>{
-   loserUsed++;
-   const a=value(next.r), b=value(loserCurrent.r);
-
-   if(a===b){
-     alert("Gleichstand – 1 Schluck.");
-     busPlayed.push(next);
-     if(loserDeck.length){
-       loserFreshCards.unshift(loserDeck.shift());
-       loserUsed++;
-     }
+ // EQUAL: 1 sip. The equal card is used. Put one NEW card face-down
+ // on the same comparison position. Do not change the comparison card
+ // and do not reshuffle.
+ if(a===b){
+   busPlayed.push(next);
+   if(loserDeck.length){
+     loserFreshCards.unshift(loserDeck.shift());
+     loserUsed++;
      busBusy=false;
      renderBusfahrer();
      return;
    }
+   busBusy=false;
+   busFinishIfNoCards();
+   return;
+ }
 
-   const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
+ const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
 
-   if(ok){
-     busPlayed.push(loserCurrent);
-     loserCurrent=next;
-     loserCorrect++;
-     busRoundCount--;
+ if(ok){
+   // The revealed card becomes the new comparison card.
+   busPlayed.push(loserCurrent);
+   loserCurrent=next;
+   loserCorrect++;
+   busRoundCount--;
 
-     if(loserFreshCards.length===0){
-       if(loserDeck.length===0){
-         alert("Das komplette Deck ist geschafft!");
-         home();
-         return;
-       }
-       busRoundStart=loserCurrent;
-       busRoundCount=Math.min(6,loserDeck.length);
-       for(let i=0;i<busRoundCount;i++){
-         loserFreshCards.push(loserDeck.shift());
-         loserUsed++;
-       }
-     }
-   }else{
-     const revealedCount=busRoundCount-loserFreshCards.length;
-     const newCount=Math.max(1,revealedCount);
-     alert("Falsch – "+newCount+" Schlücke.");
-
-     // The whole played part of this round remains visible as a Solitaire-like pile.
-     busPlayed.push(loserCurrent);
-     busPlayed.push(next);
-     loserCurrent=busRoundStart;
-     loserCorrect=0;
-     loserFreshCards=[];
-
-     const actualNew=Math.min(newCount,loserDeck.length);
-     for(let i=0;i<actualNew;i++){
-       loserFreshCards.push(loserDeck.shift());
-       loserUsed++;
-     }
-
-     if(actualNew===0){
-       alert("Das 32-Karten-Deck ist aufgebraucht.");
+   // If all cards in this row were correct, lay out the next six cards
+   // from the SAME deck. No reshuffle.
+   if(loserFreshCards.length===0){
+     if(loserDeck.length===0){
+       busBusy=false;
+       alert("Das komplette 32-Karten-Deck ist aufgebraucht. Busfahrer geschafft!");
        home();
        return;
      }
-     busRoundCount=actualNew;
+
+     busRoundStart=loserCurrent;
+     busRoundCount=Math.min(6,loserDeck.length);
+     loserFreshCards=[];
+     for(let i=0;i<busRoundCount;i++){
+       loserFreshCards.push(loserDeck.shift());
+       loserUsed++;
+     }
    }
 
    busBusy=false;
    renderBusfahrer();
- },650);
+   return;
+ }
+
+ // WRONG: the number of cards revealed in this row determines both
+ // the number of new cards and the number of sips.
+ const revealedCount=Math.max(1,busRoundCount-loserFreshCards.length);
+
+ // Keep the revealed cards visible in the Solitaire-like played pile.
+ busPlayed.push(loserCurrent);
+ busPlayed.push(next);
+
+ const newCount=Math.min(revealedCount,loserDeck.length);
+ loserCurrent=busRoundStart;
+ loserCorrect=0;
+ loserFreshCards=[];
+
+ // No reshuffle here: take the next cards from the existing deck.
+ for(let i=0;i<newCount;i++){
+   loserFreshCards.push(loserDeck.shift());
+   loserUsed++;
+ }
+
+ busBusy=false;
+
+ alert("Falsch – "+revealedCount+" Schlücke. "+newCount+" neue Karten werden ausgelegt.");
+
+ if(newCount===0){
+   alert("Das 32-Karten-Deck ist aufgebraucht. Busfahrer beendet.");
+   home();
+   return;
+ }
+
+ busRoundCount=newCount;
+ renderBusfahrer();
 }
 
 function showRules(){
- setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Busfahrer</h3><p>Der 4. König aktiviert Busfahrer. Der Verlierer spielt mit einem neu gemischten 32-Karten-Deck. Eine Karte liegt offen, sechs Karten liegen verdeckt bereit. Für jede nächste Karte wird Hoch oder Tief geraten. 6 richtige in Folge schaffen. Falsche Ansage: 3 Schlücke und 3 neue Karten werden ausgelegt. Gleichstand: 1 Schluck; die neue Karte bleibt aus dem Deck und die aktuelle Vergleichskarte bleibt bestehen. Alle gespielten Karten bleiben aus dem verfügbaren Deck.</p></div></div>');
+ setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Busfahrer</h3><p>Busfahrer: Das 32-Karten-Deck wird nur zu Beginn neu gemischt. Eine Karte liegt offen, sechs Karten liegen verdeckt bereit. Hoch oder Tief entscheidet die nächste Karte. Bei richtiger Antwort geht es mit der nächsten verdeckten Karte weiter. Bei falscher Antwort werden so viele neue Karten ausgelegt, wie in dieser Runde aufgedeckt wurden, und genauso viele Schlücke getrunken. Bei Gleichstand: 1 Schluck; die gleiche Karte ist verbraucht und eine neue Karte wird verdeckt auf die letzte offene Karte gelegt. Während Busfahrer läuft wird niemals neu gemischt.</p></div></div>');
  const s=document.querySelector(".screen");s.append(makeButton("Zurück",players.length?renderMain:home,true));
 }
 
