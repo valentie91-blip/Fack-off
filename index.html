@@ -21,7 +21,7 @@ h2{margin:12px 0 20px}
 .turn{font-size:22px;font-weight:800}
 .status{font-size:12px;color:#aaa;text-align:right;line-height:1.5}
 .board{position:relative;width:min(94vw,650px);height:min(94vw,650px);margin:8px auto}
-.card{position:absolute;width:46px;height:68px;border-radius:8px;border:1px solid #777;background:linear-gradient(135deg,#333,#111);box-shadow:0 3px 9px #000;transform:translate(-50%,-50%);cursor:pointer;padding:0}
+.card{position:absolute;width:52px;height:76px;border-radius:9px;border:2px solid #222;background:#050505;color:#fff;box-shadow:0 3px 9px #000;transform:translate(-50%,-50%);cursor:pointer;padding:0}
 .card.face{background:#f8f8f8;color:#111;border:2px solid #ddd}
 .card .rank{position:absolute;top:3px;left:5px;font-size:11px;font-weight:800}
 .card .suit{position:absolute;left:0;right:0;top:20px;text-align:center;font-size:20px}
@@ -91,7 +91,7 @@ function renderMain(){
  setApp('<div class="screen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div id="turn" class="turn"></div><div id="status" class="status"></div></div><div id="board" class="board"></div><div id="actions"></div></div>');
  document.getElementById("turn").textContent=players[current]+" ist dran";
  document.getElementById("status").innerHTML=(kingHolder?"König – "+kingHolder+"<br>":"")+(activeDame?'<button style="background:none;border:0;color:#aaa;padding:0;font-size:12px" onclick="clearDame()">Dame – '+activeDame+'</button>':"");
- const b=document.getElementById("board"),active=deck.filter(c=>!c.removed),cx=b.clientWidth/2,cy=b.clientHeight/2,rx=b.clientWidth*.39,ry=b.clientHeight*.39;
+ const b=document.getElementById("board"),active=deck.filter(c=>!c.removed),cx=b.clientWidth/2,cy=b.clientHeight/2,rx=Math.max(115,b.clientWidth*.38),ry=Math.max(135,b.clientHeight*.38);
  active.forEach((c,i)=>{const a=i/active.length*Math.PI*2-Math.PI/2,x=document.createElement("button");x.className="card"+(c===revealed?" face":"");x.style.left=(cx+Math.cos(a)*rx)+"px";x.style.top=(cy+Math.sin(a)*ry)+"px";x.style.transform="translate(-50%,-50%) rotate("+(a*180/Math.PI+90)+"deg)";if(c===revealed)x.innerHTML='<span class="rank">'+c.r+'</span><span class="suit '+c.c+'">'+c.s+'</span>';x.onclick=()=>drawMain(c);b.append(x)});
  const center=document.createElement("div");center.className="center";center.textContent=active.length+" Karten";b.append(center);
  document.getElementById("actions").append(makeButton("Regeln",showRules,true));
