@@ -17,7 +17,7 @@ input{width:100%;padding:15px;border-radius:12px;border:0;font-size:18px;margin-
 .mainCard.back{background:#8b1111;color:#fff}.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}.activeKing,.activeDame{font-size:12px;opacity:.85;margin:4px}
 #largeCard{position:fixed;inset:0;background:#111e;display:none;align-items:center;justify-content:center;z-index:20}.largeInner{width:min(76vw,340px);aspect-ratio:2/3;border-radius:24px;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:76px;font-weight:900;box-shadow:0 15px 50px #000}.overlay{position:fixed;inset:0;background:#000d;z-index:30;padding:20px;overflow:auto}.panel{max-width:520px;margin:30px auto;background:#1c1c1c;border-radius:18px;padding:20px}
 
-.busTop{text-align:center}.busTitle{font-size:28px;font-weight:900;margin:5px}.busInfo{opacity:.75;font-size:14px}.busBoard{height:260px;display:flex;align-items:center;justify-content:center;gap:7px;margin:18px 0;overflow:hidden}.busSlot{width:54px;height:76px;position:relative;flex:none}.busCard{position:absolute;width:54px;height:76px;border-radius:8px;border:2px solid #333;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;box-shadow:0 4px 10px #0008}.busCard.back{background:#8b1111;color:#fff}.busCard.layer{transform:translate(4px,-3px) rotate(1.5deg)}.busCard.layer2{transform:translate(8px,-5px) rotate(-1.5deg)}
+.busTop{text-align:center}.busTitle{font-size:28px;font-weight:900;margin:5px}.busInfo{opacity:.75;font-size:14px}.busBoard{height:260px;display:flex;align-items:center;justify-content:center;gap:5px;margin:18px auto;overflow:visible;width:100%;padding:0 8px}.busSlot{width:45px;height:68px;position:relative;flex:0 0 45px}.busCard{position:absolute;width:45px;height:68px;border-radius:8px;border:2px solid #333;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;box-shadow:0 4px 10px #0008}.busCard.back{background:#8b1111;color:#fff}.busCard.layer{transform:translate(4px,-3px) rotate(1.5deg)}.busCard.layer2{transform:translate(8px,-5px) rotate(-1.5deg)}
 .choice{display:flex;gap:12px;justify-content:center}.choice .btn{width:45%}.equalBtn{display:block;margin:10px auto 0;width:92%;background:#333}
 .drink{text-align:center;font-size:17px;font-weight:800;min-height:25px}.sequence{font-size:12px;opacity:.6;text-align:center}
 </style>
@@ -90,61 +90,140 @@ function closeRules(){rulesOverlay.classList.add('hidden')}
 function confirmEnd(){if(confirm('Spiel wirklich beenden?'))goHome()}
 function confirmBusEnd(){if(confirm('Busfahrer wirklich beenden?'))goHome()}
 function startBusfahrer(name){
- bus.player=name;bus.deck=[];
- for(let s of suits)for(let r of ranks)bus.deck.push({r,s});
- for(let i=bus.deck.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[bus.deck[i],bus.deck[j]]=[bus.deck[j],bus.deck[i]]}
- bus.slots=[bus.deck.shift()];
- for(let i=1;i<7;i++)bus.slots.push(bus.deck.shift());
- bus.revealed=1;bus.streak=0;bus.message='';bus.active=true;
- hideAll();busGame.classList.remove('hidden');renderBus()
+  bus.player=name;
+  bus.deck=[];
+  for(let s of suits)for(let r of ranks)bus.deck.push({r,s});
+  for(let i=bus.deck.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [bus.deck[i],bus.deck[j]]=[bus.deck[j],bus.deck[i]]
+  }
+  // Die erste Karte ist immer die sichtbare Startkarte.
+  bus.slots=[bus.deck.shift()];
+  // Die nächsten sechs Karten werden verdeckt ausgelegt.
+  for(let i=1;i<7;i++)bus.slots.push(bus.deck.shift());
+  bus.revealed=1;
+  bus.streak=0;
+  bus.message='';
+  bus.active=true;
+  bus.wrongPause=false;
+  hideAll();busGame.classList.remove('hidden');renderBus()
 }
 function startBusfahrerStandalone(){startBusfahrer('Busfahrer')}
-function compare(a,b){let av=ranks.indexOf(a.r),bv=ranks.indexOf(b.r);return bv>av?'high':bv<av?'low':'equal'}
+function compare(a,b){
+  let av=ranks.indexOf(a.r),bv=ranks.indexOf(b.r);
+  return bv>av?'high':bv<av?'low':'equal'
+}
 function busGuess(g){
-if(!bus.active)return;
-let next=bus.deck[bus.pos+1];
-if(!next){finishBus();return}
-let res=compare(bus.open[bus.open.length-1],next);
-bus.open.push(next);bus.pos++;
-bus.message=res===g?'Richtig!':'Falsch!';
-if(res!==g){
-  bus.message=`Falsch! ${bus.open.length-1} Schlücke.`;
-  renderBus();
-  setTimeout(()=>{
-    for(let i=1;i<bus.open.length;i++)bus.layers[i]++;
-    bus.pos=bus.open.length>=7 ? bus.pos : bus.open.length-1;
-    bus.message=`Falsch! ${bus.open.length-1} Schlücke.`;
+  if(!bus.active || bus.wrongPause)return;
+
+  // Es wird immer die nächste verdeckte Karte auf ihrer festen Position aufgedeckt.
+  let next=bus.slots[bus.revealed];
+  if(!next){finishBus();return}
+
+  let current=bus.slots[bus.revealed-1];
+  let res=compare(current,next);
+
+  bus.revealed++;
+  if(res===g){
+    bus.streak++;
+    bus.message='Richtig!';
     renderBus();
+
+    // Sechs richtige hintereinander = geschafft.
+    if(bus.streak>=6){
+      setTimeout(()=>finishBus(),1200);
+      return;
+    }
+
+    // Falls keine weitere Karte zum Auslegen vorhanden ist, endet das Spiel.
+    if(bus.deck.length===0 && bus.revealed>=7){
+      setTimeout(()=>finishBus(),1200);
+    }
+    return;
+  }
+
+  // Falsch: Startkarte zählt NICHT als Schluck.
+  // Die Anzahl der aufgedeckten Karten minus die erste Karte.
+  const drinks=bus.revealed-1;
+  bus.streak=0;
+  bus.message=`Falsch! ${drinks} Schlücke.`;
+
+  // Erst 3 Sekunden lang die gerade aufgedeckte Karte zeigen.
+  bus.wrongPause=true;
+  renderBus();
+
+  setTimeout(()=>{
+    // Für jede aufgedeckte Karte außer der ersten kommt eine neue
+    // verdeckte Karte. Die erste Startkarte bleibt sichtbar.
+    for(let i=1;i<bus.revealed;i++){
+      if(bus.deck.length===0)break;
+      bus.slots[i]=bus.deck.shift();
+    }
+
+    // Nach einem Fehler immer wieder von vorne beginnen.
+    bus.revealed=1;
+    bus.wrongPause=false;
+    bus.message=`Falsch! ${drinks} Schlücke.`;
+    renderBus();
+
+    if(bus.deck.length===0 && bus.revealed===1){
+      // Wenn wirklich keine Karten mehr nachgelegt werden können,
+      // ist das Spiel beendet.
+      finishBus();
+    }
   },3000);
-  return;
-}
-if(bus.open.length>=7){finishBus();return}
-renderBus()
-}
-function busEqual(){
- if(!bus.active)return;
- const next=bus.slots[bus.revealed];
- if(!next)return;
- bus.message='Gleich – 1 Schluck. Eine neue Karte kommt auf diese Position.';
- // Die neue Karte liegt verdeckt auf der letzten offenen Position.
- if(bus.deck.length===0){finishBus();return}
- bus.slots[bus.revealed]=bus.deck.shift();
- renderBus()
-}
-function renderBus(){
- let board=document.getElementById('busBoard');board.innerHTML='';
- for(let i=0;i<7;i++){
-   let slot=document.createElement('div');slot.className='busSlot';
-   let card=document.createElement('div');
-   card.className='busCard '+(i<bus.revealed?'':'back');
-   card.textContent=i<bus.revealed?cardText(bus.slots[i]):'';
-   slot.appendChild(card);board.appendChild(slot)
- }
- document.getElementById('busPlayer').textContent=bus.player;
- document.getElementById('busPrompt').textContent=bus.message;
- document.getElementById('busSequence').textContent=`${bus.streak} von 6 richtig · ${bus.deck.length} Karten verbleiben`
 }
 
-function finishBus(){bus.active=false;bus.message='Busfahrer geschafft!';renderBus();document.querySelectorAll('#busGame .choice button,#busGame .equalBtn').forEach(b=>b.disabled=true)}
+function busEqual(){
+  if(!bus.active || bus.wrongPause)return;
+
+  // Gleichstand: 1 Schluck und eine neue Karte verdeckt
+  // auf die Position der letzten offenen Karte.
+  const drinks=1;
+  if(bus.deck.length===0){
+    bus.message='Gleich – 1 Schluck.';
+    renderBus();
+    setTimeout(()=>finishBus(),1200);
+    return;
+  }
+
+  bus.message='Gleich – 1 Schluck.';
+  bus.streak=0;
+
+  // Die letzte offene Position wird mit einer neuen verdeckten Karte ersetzt.
+  bus.slots[bus.revealed-1]=bus.deck.shift();
+  renderBus();
+}
+
+function renderBus(){
+  let board=document.getElementById('busBoard');
+  board.innerHTML='';
+
+  for(let i=0;i<7;i++){
+    let slot=document.createElement('div');
+    slot.className='busSlot';
+
+    let card=document.createElement('div');
+    card.className='busCard '+(i<bus.revealed?'':'back');
+    card.textContent=i<bus.revealed?cardText(bus.slots[i]):'';
+    slot.appendChild(card);
+
+    board.appendChild(slot);
+  }
+
+  document.getElementById('busPlayer').textContent=bus.player;
+  document.getElementById('busPrompt').textContent=bus.message;
+  document.getElementById('busSequence').textContent=
+    `${bus.streak} von 6 richtig · ${bus.deck.length} Karten verbleiben`;
+}
+
+function finishBus(){
+  bus.active=false;
+  bus.wrongPause=false;
+  bus.message=bus.streak>=6?'Busfahrer geschafft!':'Alle Karten wurden verwendet.';
+  renderBus();
+  document.querySelectorAll('#busGame .choice button,#busGame .equalBtn')
+    .forEach(b=>b.disabled=true)
+}
 </script>
 </body></html>
