@@ -89,7 +89,7 @@ function setup(){
  document.getElementById("back").append(makeButton("Zurück",home,true));
 }
 
-function newDeck(){const a=[];for(const r of RANKS)for(const [s,c] of SUITS)a.push({r,s,c,id:Math.random()});return a.sort(()=>Math.random()-.5)}
+function newDeck(){const a=[];for(const r of RANKS)for(const [s,c] of SUITS)a.push({r,s,c,id:Math.random()});for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
 function startMain(){current=0;deck=newDeck();revealed=null;kingCount=0;kingHolder=null;activeDame=null;renderMain()}
 
@@ -171,9 +171,14 @@ function chooseBusfahrerPlayer(){
 
 function startBusfahrer(p){
  loser=p;
- loserDeck=newDeck();
  loserCorrect=0;
  loserUsed=0;
+ loserCurrent=null;
+ loserFreshCards=[];
+ busBusy=false;
+ busRoundStart=null;
+ busRoundCount=0;
+ loserDeck=newDeck();
  loserCurrent=loserDeck.shift();
  loserUsed=1;
  busRoundStart=loserCurrent;
