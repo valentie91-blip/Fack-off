@@ -188,7 +188,7 @@ function busCardHTML(c,faceDown=false){
 }
 
 function renderBusfahrer(){
- setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status"></div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busRow" id="busRow"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Wähle Hoch oder Tief. Danach wird die nächste verdeckte Karte aufgedeckt.</div></div>);
+ setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status"></div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busRow" id="busRow"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Wähle Hoch oder Tief. Danach wird die nächste verdeckte Karte aufgedeckt.</div></div>');
  const row=document.getElementById("busRow");
  row.innerHTML=busCardHTML(loserCurrent,false);
  loserFreshCards.forEach(c=>row.insertAdjacentHTML("beforeend",busCardHTML(c,true)));
