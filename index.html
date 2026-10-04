@@ -15,7 +15,9 @@ h2{margin:12px 0 20px}
 .btn.dark{background:#303034;color:#fff}
 .input{width:min(390px,94vw);padding:15px;margin:6px 0;border-radius:13px;border:1px solid #555;background:#202023;color:#fff}
 .small{font-size:13px;color:#aaa;text-align:center}
-.top{width:100%;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.top{width:100%;display:flex;align-items:flex-start;gap:10px}
+.backArrow{width:34px;height:34px;padding:0;border:0;border-radius:10px;background:#303034;color:#fff;font-size:28px;line-height:30px;flex-shrink:0}
+.top .turn{flex:1}
 .turn{font-size:22px;font-weight:800}
 .status{font-size:12px;color:#aaa;text-align:right;line-height:1.5}
 .board{position:relative;width:min(94vw,650px);height:min(94vw,650px);margin:8px auto}
@@ -23,270 +25,116 @@ h2{margin:12px 0 20px}
 .card.face{background:#f8f8f8;color:#111;border:2px solid #ddd}
 .card .rank{position:absolute;top:3px;left:5px;font-size:11px;font-weight:800}
 .card .suit{position:absolute;left:0;right:0;top:20px;text-align:center;font-size:20px}
-.red{color:#c22}
-.black{color:#111}
+.red{color:#c22}.black{color:#111}
 .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#777;font-size:13px;pointer-events:none}
 .overlay{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;z-index:20}
 .big{width:min(72vw,300px);height:min(92vw,430px);border-radius:24px;background:#fafafa;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 15px 55px #000}
-.big .rank{font-size:78px;font-weight:900}
-.big .suit{font-size:70px}
-.big .action{font-size:19px;font-weight:700;text-align:center;padding:18px}
-.rules{width:min(720px,96vw);line-height:1.45}
-.rules h3{margin:20px 0 5px}
-.rules p{color:#ddd;margin:6px 0}
-.list{width:min(500px,94vw)}
-.choice{width:100%;background:#252527;color:#fff;border:1px solid #444;border-radius:13px;padding:14px;margin:5px 0}
-.choice.active{border-color:#fff}
-.hidden{display:none}
+.big .rank{font-size:78px;font-weight:900}.big .suit{font-size:70px}.big .action{font-size:19px;font-weight:700;text-align:center;padding:18px}
+.rules{width:min(720px,96vw);line-height:1.45}.rules h3{margin:20px 0 5px}.rules p{color:#ddd;margin:6px 0}
+.list{width:min(500px,94vw)}.choice{width:100%;background:#252527;color:#fff;border:1px solid #444;border-radius:13px;padding:14px;margin:5px 0}.choice.active{border-color:#fff}
 </style>
 </head>
 <body>
 <div id="app"></div>
-
 <script>
 const SUITS=[["♥","red"],["♦","red"],["♣","black"],["♠","black"]];
 const RANKS=["7","8","9","10","B","D","K","A"];
-
 let players=[],current=0,deck=[],revealed=null,kingCount=0,kingHolder=null,activeDame=null;
 let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0;
 
 function setApp(html){document.getElementById("app").innerHTML=html}
+function makeButton(text,fn,dark=false){const b=document.createElement("button");b.className="btn"+(dark?" dark":"");b.textContent=text;b.onclick=fn;return b}
 
-function makeButton(text,fn,dark=false){
-  const b=document.createElement("button");
-  b.className="btn"+(dark?" dark":"");
-  b.textContent=text;
-  b.onclick=fn;
-  return b;
-}
-
-/* STARTSEITE */
 function home(){
-  setApp('<div class="screen"><h1>Fack Off</h1><div id="homeButtons"></div><p class="small">Testversion</p></div>');
-  const b=document.getElementById("homeButtons");
-  b.append(makeButton("Neues Spiel",setup));
-  b.append(makeButton("Regeln",showRules,true));
+ setApp('<div class="screen"><h1>Fack Off</h1><div id="homeButtons"></div><p class="small">Testversion</p></div>');
+ const b=document.getElementById("homeButtons");b.append(makeButton("Neues Spiel",setup));b.append(makeButton("Regeln",showRules,true));
 }
 
-/* NEUES SPIEL */
 function setup(){
-  setApp('<div class="screen"><h2>Neues Spiel</h2><p class="small">2–8 Spieler</p><div id="names"></div><div id="start"></div><div id="back"></div></div>');
-
-  const names=document.getElementById("names");
-  for(let i=0;i<8;i++){
-    const x=document.createElement("input");
-    x.className="input";
-    x.placeholder="Spieler "+(i+1);
-    x.id="p"+i;
-    if(i>1)x.style.display="none";
-    names.append(x);
-  }
-
-  const row=document.createElement("div");
-  row.className="row";
-  for(let n=2;n<=8;n++){
-    const b=document.createElement("button");
-    b.className="choice"+(n===2?" active":"");
-    b.textContent=n+" Spieler";
-    b.onclick=()=>{
-      document.querySelectorAll("#names .input").forEach((x,i)=>x.style.display=i<n?"block":"none");
-      document.querySelectorAll(".choice").forEach(x=>x.classList.remove("active"));
-      b.classList.add("active");
-    };
-    row.append(b);
-  }
-  names.prepend(row);
-
-  document.getElementById("start").append(
-    makeButton("Spiel starten",()=>{
-      players=[];
-      for(let i=0;i<8;i++){
-        const x=document.getElementById("p"+i);
-        if(x.style.display!=="none") players.push(x.value.trim()||"Spieler "+(i+1));
-      }
-      startMain();
-    })
-  );
-
-  document.getElementById("back").append(makeButton("Zurück",home,true));
+ setApp('<div class="screen"><h2>Neues Spiel</h2><p class="small">2–8 Spieler</p><div id="names"></div><div id="start"></div><div id="back"></div></div>');
+ const names=document.getElementById("names");
+ for(let i=0;i<8;i++){const x=document.createElement("input");x.className="input";x.placeholder="Spieler "+(i+1);x.id="p"+i;if(i>1)x.style.display="none";names.append(x)}
+ const row=document.createElement("div");row.className="row";
+ for(let n=2;n<=8;n++){const b=document.createElement("button");b.className="choice"+(n===2?" active":"");b.textContent=n+" Spieler";b.onclick=()=>{document.querySelectorAll("#names .input").forEach((x,i)=>x.style.display=i<n?"block":"none");document.querySelectorAll(".choice").forEach(x=>x.classList.remove("active"));b.classList.add("active")};row.append(b)}
+ names.prepend(row);
+ document.getElementById("start").append(makeButton("Spiel starten",()=>{players=[];for(let i=0;i<8;i++){const x=document.getElementById("p"+i);if(x.style.display!=="none")players.push(x.value.trim()||"Spieler "+(i+1))}startMain()}));
+ document.getElementById("back").append(makeButton("Zurück",home,true));
 }
 
-/* DECK */
-function newDeck(){
-  const a=[];
-  for(const r of RANKS)
-    for(const [s,c] of SUITS)
-      a.push({r,s,c,id:Math.random()});
-  return a.sort(()=>Math.random()-.5);
-}
+function newDeck(){const a=[];for(const r of RANKS)for(const [s,c] of SUITS)a.push({r,s,c,id:Math.random()});return a.sort(()=>Math.random()-.5)}
 
-/* HAUPTSPIEL */
-function startMain(){
-  current=0;
-  deck=newDeck();
-  revealed=null;
-  kingCount=0;
-  kingHolder=null;
-  activeDame=null;
-  renderMain();
-}
+function startMain(){current=0;deck=newDeck();revealed=null;kingCount=0;kingHolder=null;activeDame=null;renderMain()}
 
 function cardText(c){
-  if("789".includes(c.r)){
-    const n=+c.r;
-    return c.c==="red"?n+" Schlücke verteilen":n+" Schlücke selbst";
-  }
-  if(c.r==="10")return"FACKOFF – Namensregel";
-  if(c.r==="B")return"BUBE – Neue Regel erstellen";
-  if(c.r==="D")return"DAME – Daumenspiel";
-  if(c.r==="K")return kingCount<4?"KÖNIG – Fragen stellen":"4. KÖNIG – Spiel beendet";
-  if(c.r==="A")return c.c==="red"?"4 Schlücke verteilen":"4 Schlücke selbst";
-  return"";
+ if("789".includes(c.r)){const n=+c.r;return c.c==="red"?n+" Schlücke verteilen":n+" Schlücke selbst"}
+ if(c.r==="10")return"FACKOFF – Namensregel";
+ if(c.r==="B")return"BUBE – Neue Regel erstellen";
+ if(c.r==="D")return"DAME – Daumenspiel";
+ if(c.r==="K")return kingCount<4?"KÖNIG – Fragen stellen":"4. KÖNIG – Spiel beendet";
+ if(c.r==="A")return c.c==="red"?"4 Schlücke verteilen":"4 Schlücke selbst";
+ return"";
 }
 
 function renderMain(){
-  setApp('<div class="screen"><div class="top"><div id="turn" class="turn"></div><div id="status" class="status"></div></div><div id="board" class="board"></div><div id="actions"></div></div>');
+ setApp('<div class="screen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div id="turn" class="turn"></div><div id="status" class="status"></div></div><div id="board" class="board"></div><div id="actions"></div></div>');
+ document.getElementById("turn").textContent=players[current]+" ist dran";
+ document.getElementById("status").innerHTML=(kingHolder?"König – "+kingHolder+"<br>":"")+(activeDame?'<button style="background:none;border:0;color:#aaa;padding:0;font-size:12px" onclick="clearDame()">Dame – '+activeDame+'</button>':"");
+ const b=document.getElementById("board"),active=deck.filter(c=>!c.removed),cx=b.clientWidth/2,cy=b.clientHeight/2,rx=b.clientWidth*.39,ry=b.clientHeight*.39;
+ active.forEach((c,i)=>{const a=i/active.length*Math.PI*2-Math.PI/2,x=document.createElement("button");x.className="card"+(c===revealed?" face":"");x.style.left=(cx+Math.cos(a)*rx)+"px";x.style.top=(cy+Math.sin(a)*ry)+"px";x.style.transform="translate(-50%,-50%) rotate("+(a*180/Math.PI+90)+"deg)";if(c===revealed)x.innerHTML='<span class="rank">'+c.r+'</span><span class="suit '+c.c+'">'+c.s+'</span>';x.onclick=()=>drawMain(c);b.append(x)});
+ const center=document.createElement("div");center.className="center";center.textContent=active.length+" Karten";b.append(center);
+ document.getElementById("actions").append(makeButton("Regeln",showRules,true));
+}
 
-  document.getElementById("turn").textContent=players[current]+" ist dran";
-  document.getElementById("status").innerHTML=
-    (kingHolder?"König – "+kingHolder+"<br>":"")+
-    (activeDame?'<button style="background:none;border:0;color:#aaa;padding:0;font-size:12px" onclick="clearDame()">Dame – '+activeDame+'</button>':"");
-
-  const b=document.getElementById("board");
-  const active=deck.filter(c=>!c.removed);
-  const cx=b.clientWidth/2,cy=b.clientHeight/2;
-  const rx=b.clientWidth*.39,ry=b.clientHeight*.39;
-
-  active.forEach((c,i)=>{
-    const a=i/active.length*Math.PI*2-Math.PI/2;
-    const x=document.createElement("button");
-    x.className="card"+(c===revealed?" face":"");
-    x.style.left=(cx+Math.cos(a)*rx)+"px";
-    x.style.top=(cy+Math.sin(a)*ry)+"px";
-    x.style.transform="translate(-50%,-50%) rotate("+(a*180/Math.PI+90)+"deg)";
-    if(c===revealed)
-      x.innerHTML='<span class="rank">'+c.r+'</span><span class="suit '+c.c+'">'+c.s+'</span>';
-    x.onclick=()=>drawMain(c);
-    b.append(x);
-  });
-
-  const center=document.createElement("div");
-  center.className="center";
-  center.textContent=active.length+" Karten";
-  b.append(center);
-
-  document.getElementById("actions").append(makeButton("Regeln",showRules,true));
+function endGame(){
+ if(confirm("Laufendes Spiel wirklich beenden?")) home();
 }
 
 function drawMain(c){
-  if(revealed) revealed.removed=true;
-  revealed=c;
-
-  if(c.r==="D") activeDame=players[current];
-  if(c.r==="K"){
-    kingCount++;
-    kingHolder=players[current];
-  }
-
-  showBig(c,()=>{
-    if(c.r==="K"&&kingCount>=4){
-      chooseLoser();
-      return;
-    }
-    current=(current+1)%players.length;
-    renderMain();
-  });
+ if(revealed)revealed.removed=true;
+ revealed=c;
+ if(c.r==="D")activeDame=players[current];
+ if(c.r==="K"){kingCount++;kingHolder=players[current]}
+ showBig(c,()=>{
+   if(c.r==="K"&&kingCount>=4){chooseLoser();return}
+   current=(current+1)%players.length;renderMain();
+ });
 }
 
 function showBig(c,done){
-  const o=document.createElement("div");
-  o.className="overlay";
-  const b=document.createElement("div");
-  b.className="big";
-  b.innerHTML='<div class="rank">'+c.r+'</div><div class="suit '+c.c+'">'+c.s+'</div><div class="action">'+cardText(c)+'</div>';
-  o.append(b);
-  document.body.append(o);
-  setTimeout(()=>{o.remove();done()},1000);
+ const o=document.createElement("div");o.className="overlay";
+ const b=document.createElement("div");b.className="big";
+ b.innerHTML='<div class="rank">'+c.r+'</div><div class="suit '+c.c+'">'+c.s+'</div><div class="action">'+cardText(c)+'</div>';
+ o.append(b);document.body.append(o);
+ setTimeout(()=>{o.remove();done()},2000);
 }
 
-function clearDame(){
-  activeDame=null;
-  renderMain();
-}
+function clearDame(){activeDame=null;renderMain()}
 
-/* VERLIERER */
 function chooseLoser(){
-  setApp('<div class="screen"><h2>Wer hat verloren?</h2><p class="small">Der Spieler, der laut der gespielten Bube-Regel verloren hat.</p><div id="loserList" class="list"></div><div id="back"></div></div>');
-  const l=document.getElementById("loserList");
-  players.forEach(p=>{
-    const b=document.createElement("button");
-    b.className="choice";
-    b.textContent=p;
-    b.onclick=()=>startLoser(p);
-    l.append(b);
-  });
-  document.getElementById("back").append(makeButton("Hauptmenü",home,true));
+ setApp('<div class="screen"><h2>Wer hat verloren?</h2><p class="small">Der Spieler, der laut der gespielten Bube-Regel verloren hat.</p><div id="loserList" class="list"></div><div id="back"></div></div>');
+ const l=document.getElementById("loserList");players.forEach(p=>{const b=document.createElement("button");b.className="choice";b.textContent=p;b.onclick=()=>startLoser(p);l.append(b)});
+ document.getElementById("back").append(makeButton("Hauptmenü",home,true));
 }
 
-function startLoser(p){
-  loser=p;
-  loserDeck=newDeck();
-  loserCorrect=0;
-  loserCurrent=loserDeck.shift();
-  renderLoser();
-}
-
+function startLoser(p){loser=p;loserDeck=newDeck();loserCorrect=0;loserCurrent=loserDeck.shift();renderLoser()}
 function value(r){return RANKS.indexOf(r)}
-
 function renderLoser(){
-  setApp('<div class="screen"><h2>Verlierer-Spiel</h2><p>'+loser+' ist dran</p><div style="margin:30px;font-size:100px;font-weight:900">'+loserCurrent.r+loserCurrent.s+'</div><p class="small">Kommt die nächste Karte höher oder tiefer?</p><div class="list" id="choices"></div><p id="progress" class="small"></p></div>');
-  const c=document.getElementById("choices");
-  ["Hoch","Tief"].forEach(v=>{
-    const b=document.createElement("button");
-    b.className="choice";
-    b.textContent=v;
-    b.onclick=()=>guess(v);
-    c.append(b);
-  });
-  document.getElementById("progress").textContent=loserCorrect+" von 6 richtig";
+ setApp('<div class="screen"><h2>Verlierer-Spiel</h2><p>'+loser+' ist dran</p><div style="margin:30px;font-size:100px;font-weight:900">'+loserCurrent.r+loserCurrent.s+'</div><p class="small">Kommt die nächste Karte höher oder tiefer?</p><div class="list" id="choices"></div><p id="progress" class="small"></p></div>');
+ const c=document.getElementById("choices");["Hoch","Tief"].forEach(v=>{const b=document.createElement("button");b.className="choice";b.textContent=v;b.onclick=()=>guess(v);c.append(b)});document.getElementById("progress").textContent=loserCorrect+" von 6 richtig";
 }
-
 function guess(g){
-  if(!loserDeck.length){alert("Alle 32 Karten wurden verwendet.");home();return}
-
-  const next=loserDeck.shift();
-  const a=value(next.r),b=value(loserCurrent.r);
-
-  if(a===b){
-    alert("Gleich hoch – 1 Schluck. Diese Karte wird ersetzt.");
-    renderLoser();
-    return;
-  }
-
-  const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
-
-  if(ok){
-    loserCorrect++;
-    loserCurrent=next;
-    if(loserCorrect>=6){
-      alert("6 richtige in Folge – geschafft!");
-      home();
-      return;
-    }
-  }else{
-    alert("Falsch – 3 Schlücke.");
-    loserCorrect=0;
-    loserCurrent=next;
-  }
-
-  renderLoser();
+ if(!loserDeck.length){alert("Alle 32 Karten wurden verwendet.");home();return}
+ const next=loserDeck.shift(),a=value(next.r),b=value(loserCurrent.r);
+ if(a===b){alert("Gleich hoch – 1 Schluck. Diese Karte wird ersetzt.");renderLoser();return}
+ const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
+ if(ok){loserCorrect++;loserCurrent=next;if(loserCorrect>=6){alert("6 richtige in Folge – geschafft!");home();return}}
+ else{alert("Falsch – 3 Schlücke.");loserCorrect=0;loserCurrent=next}
+ renderLoser();
 }
 
-/* REGELN */
 function showRules(){
-  setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Verlierer-Spiel</h3><p>Mit einem neuen 32-Karten-Deck. Hoch oder Tief raten. 6 richtige in Folge schaffen. Gleich hoch: 1 Schluck und die Karte wird ersetzt.</p></div></div>');
-  const s=document.querySelector(".screen");
-  s.append(makeButton("Zurück",players.length?renderMain:home,true));
+ setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Verlierer-Spiel</h3><p>Mit einem neuen 32-Karten-Deck. Hoch oder Tief raten. 6 richtige in Folge schaffen. Gleich hoch: 1 Schluck und die Karte wird ersetzt.</p></div></div>');
+ const s=document.querySelector(".screen");s.append(makeButton("Zurück",players.length?renderMain:home,true));
 }
 
 home();
