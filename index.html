@@ -32,15 +32,31 @@ h2{margin:12px 0 20px}
 .big .rank{font-size:78px;font-weight:900}.big .suit{font-size:70px}.big .action{font-size:19px;font-weight:700;text-align:center;padding:18px}
 .rules{width:min(720px,96vw);line-height:1.45}.rules h3{margin:20px 0 5px}.rules p{color:#ddd;margin:6px 0}
 .list{width:min(500px,94vw)}.choice{width:100%;background:#252527;color:#fff;border:1px solid #444;border-radius:13px;padding:14px;margin:5px 0}.choice.active{border-color:#fff}
-.busWrap{width:min(760px,96vw);margin:18px auto;text-align:center}
-.busTitle{font-size:20px;font-weight:800;margin-bottom:16px}
-.busRow{display:flex;justify-content:flex-start;align-items:center;gap:8px;min-height:112px;overflow-x:auto;padding:6px 2px}
-.bus-card{flex:0 0 66px;width:66px;height:96px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px #000}
+.busWrap{width:min(1000px,96vw);margin:8px auto;text-align:center}
+.busTitle{font-size:20px;font-weight:800;margin-bottom:10px}
+.busRow{display:flex;justify-content:center;align-items:center;gap:8px;min-height:108px;overflow:visible;padding:4px 0}
+.bus-card{flex:0 0 72px;width:72px;height:102px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px #000}
 .bus-card.up{background:#fafafa;color:#111}
-.bus-card.down{background:linear-gradient(135deg,#333,#111);border:1px solid #777;color:#aaa;font-size:28px;font-weight:900}.bus-card.up{margin-right:10px}
+.bus-card.down{background:linear-gradient(135deg,#333,#111);border:1px solid #777;color:#aaa;font-size:28px;font-weight:900}
+.bus-card.up:first-child{margin-right:12px}
+.bus-card.revealed{transform:scale(1.03);transition:transform .2s}
+.busScreen .choice{padding:10px;margin:4px 0}
+.busScreen .small{margin:6px 0}
 .bus-card .rank{font-size:34px;font-weight:900;line-height:1}
 .bus-card .suit{font-size:34px;line-height:1;margin-top:5px}
 
+@media (orientation:landscape){
+  .busScreen{padding:8px 14px}
+  .busScreen .top{margin-bottom:4px}
+  .busScreen .busRow{gap:7px}
+  .busScreen .bus-card{width:78px;height:108px;flex-basis:78px}
+  .busScreen .list{display:flex;justify-content:center;gap:10px}
+  .busScreen .choice{width:170px}
+}
+@media (max-width:900px) and (orientation:landscape){
+  .busScreen .bus-card{width:66px;height:92px;flex-basis:66px}
+  .busScreen .busRow{gap:5px}
+}
 </style>
 </head>
 <body>
@@ -49,7 +65,7 @@ h2{margin:12px 0 20px}
 const SUITS=[["♥","red"],["♦","red"],["♣","black"],["♠","black"]];
 const RANKS=["7","8","9","10","B","D","K","A"];
 let players=[],current=0,deck=[],revealed=null,kingCount=0,kingHolder=null,activeDame=null;
-let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0,loserUsed=0,loserFreshCards=[];
+let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0,loserUsed=0,loserFreshCards=[],busBusy=false;
 
 function setApp(html){document.getElementById("app").innerHTML=html}
 function makeButton(text,fn,dark=false){const b=document.createElement("button");b.className="btn"+(dark?" dark":"");b.textContent=text;b.onclick=fn;return b}
@@ -136,8 +152,8 @@ function chooseLoser(){
 }
 
 function busfahrerSetup(){
- players=["Spieler 1"];
- startBusfahrer("Spieler 1");
+ players=["Busfahrer"];
+ startBusfahrer("Busfahrer");
 }
 
 function chooseBusfahrerPlayer(){
@@ -172,7 +188,7 @@ function busCardHTML(c,faceDown=false){
 }
 
 function renderBusfahrer(){
- setApp('<div class="screen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status">'+loser+'</div></div><div class="busWrap"><div class="busTitle">'+loser+' ist dran</div><div class="busRow" id="busRow"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Die nächste verdeckte Karte wird nach deiner Wahl aufgedeckt.</div></div>');
+ setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status"></div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busRow" id="busRow"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Wähle Hoch oder Tief. Danach wird die nächste verdeckte Karte aufgedeckt.</div></div>);
  const row=document.getElementById("busRow");
  row.innerHTML=busCardHTML(loserCurrent,false);
  loserFreshCards.forEach(c=>row.insertAdjacentHTML("beforeend",busCardHTML(c,true)));
@@ -188,55 +204,71 @@ function renderBusfahrer(){
 }
 
 function busGuess(g){
- if(!loserFreshCards.length){
-   alert("Alle ausgelegten Karten wurden gespielt. Busfahrer beendet.");
-   home();
-   return;
+ if(busBusy || !loserFreshCards.length) return;
+ busBusy=true;
+
+ const row=document.getElementById("busRow");
+ const next=loserFreshCards[0];
+ const hidden=row.querySelector(".bus-card.down");
+
+ // Reveal the NEXT card in its existing position.
+ if(hidden){
+   hidden.className="bus-card up revealed";
+   hidden.innerHTML=busCardHTML(next,false).replace(/^<div class="bus-card up">|<\/div>$/g,"");
  }
 
- // The next face-down card on the table is the card that gets revealed.
- const next=loserFreshCards.shift();
+ const choices=document.querySelectorAll("#busChoices button");
+ choices.forEach(b=>b.disabled=true);
+ document.getElementById("busInfo").textContent="Karte wird aufgedeckt …";
 
- const a=value(next.r),b=value(loserCurrent.r);
-
- if(a===b){
+ setTimeout(()=>{
+   loserFreshCards.shift();
    loserUsed++;
-   alert("Gleichstand – 1 Schluck.");
-   // This card is replaced by a fresh face-down card.
-   if(loserDeck.length){
-     loserFreshCards.unshift(loserDeck.shift());
-     loserUsed++;
-   }
-   renderBusfahrer();
-   return;
- }
 
- loserUsed++;
- const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
+   const a=value(next.r), b=value(loserCurrent.r);
 
- if(ok){
-   loserCorrect++;
-   loserCurrent=next;
-   if(loserCorrect>=6){
-     alert("6 richtige in Folge – Busfahrer geschafft!");
-     home();
+   if(a===b){
+     loserCorrect=0;
+     document.getElementById("busInfo").textContent="Gleichstand – 1 Schluck. Die Karte wird ersetzt.";
+     if(loserDeck.length){
+       loserFreshCards.unshift(loserDeck.shift());
+       loserUsed++;
+     }
+     busBusy=false;
+     setTimeout(renderBusfahrer,900);
      return;
    }
-   // Keep six face-down cards available while cards remain.
-   if(loserDeck.length) loserFreshCards.push(loserDeck.shift());
-   loserUsed++;
- }else{
-   alert("Falsch – 3 Schlücke.");
-   loserCorrect=0;
-   loserCurrent=next;
-   // The three new cards are laid out after a wrong guess.
-   loserFreshCards=[];
-   for(let i=0;i<3 && loserDeck.length;i++){
-     loserFreshCards.push(loserDeck.shift());
-     loserUsed++;
+
+   const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
+
+   if(ok){
+     loserCorrect++;
+     loserCurrent=next;
+     if(loserCorrect>=6){
+       document.getElementById("busInfo").textContent="6 richtige in Folge – Busfahrer geschafft!";
+       setTimeout(home,1100);
+       return;
+     }
+     // Keep six face-down cards visible while cards remain.
+     if(loserDeck.length){
+       loserFreshCards.push(loserDeck.shift());
+       loserUsed++;
+     }
+     document.getElementById("busInfo").textContent="Richtig! Nächste Karte: Hoch oder Tief?";
+   }else{
+     loserCorrect=0;
+     loserCurrent=next;
+     document.getElementById("busInfo").textContent="Falsch – 3 Schlücke. Drei neue Karten werden ausgelegt.";
+     loserFreshCards=[];
+     for(let i=0;i<3 && loserDeck.length;i++){
+       loserFreshCards.push(loserDeck.shift());
+       loserUsed++;
+     }
    }
- }
- renderBusfahrer();
+
+   busBusy=false;
+   setTimeout(renderBusfahrer,900);
+ },900);
 }
 
 function showRules(){
