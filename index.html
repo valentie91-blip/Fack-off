@@ -45,6 +45,55 @@ h2{margin:12px 0 20px}
 .bus-card.up{background:#fafafa;color:#111}
 .bus-card.down{background:linear-gradient(135deg,#333,#111);border:1px solid #777;color:#aaa;font-size:28px;font-weight:900}
 .bus-card.revealed{transform:scale(1.03);transition:transform .2s}
+.busScreen{padding:12px 14px}
+.busScreen .small{margin:8px 0}
+.busWrap{width:100%;max-width:1100px;margin:0 auto}
+.busTitle{text-align:center;font-size:28px;font-weight:900;margin:4px 0 10px}
+.busTable{display:flex;align-items:center;justify-content:center;gap:8px;min-height:150px;overflow:hidden}
+.busCurrent{flex:0 0 auto;z-index:5}
+.busFresh{display:flex;align-items:center;gap:6px;min-width:0;overflow:visible}
+.busPlayed{display:none}
+.busScreen .bus-card{width:74px;height:106px;border-radius:16px;flex:0 0 74px;border:2px solid #666;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 7px 14px rgba(0,0,0,.35)}
+.busScreen .bus-card.down{background:linear-gradient(135deg,#242424,#151515);color:#aaa;font-size:34px}
+.busScreen .bus-card.up{background:#f8f8f8;color:#111}
+.busScreen .bus-card .rank{font-size:42px;font-weight:900;line-height:1}
+.busScreen .bus-card .suit{font-size:38px;line-height:1;margin-top:7px}
+.busScreen .bus-card .suit.red{color:#d22}
+.busScreen .bus-card .suit.black{color:#111}
+.busScreen .choice{padding:14px;margin:5px 0}
+.busScreen .list{display:flex;justify-content:center;gap:12px}
+.busScreen .choice{width:min(360px,42vw)}
+@media (orientation:landscape){
+ .busScreen{padding:6px 14px}
+ .busScreen .top{margin-bottom:2px}
+ .busTitle{font-size:24px;margin:2px 0 5px}
+ .busTable{min-height:112px;gap:6px}
+ .busScreen .bus-card{width:62px;height:88px;flex-basis:62px;border-radius:13px}
+ .busScreen .bus-card .rank{font-size:34px}
+ .busScreen .bus-card .suit{font-size:30px;margin-top:4px}
+ .busScreen .choice{width:180px;padding:10px}
+}
+@media (max-width:900px) and (orientation:landscape){
+ .busScreen .bus-card{width:58px;height:82px;flex-basis:58px}
+ .busScreen .bus-card .rank{font-size:31px}
+ .busScreen .bus-card .suit{font-size:27px}
+ .busFresh{gap:4px}
+}
+.rules{width:min(720px,96vw);line-height:1.45}.rules h3{margin:20px 0 5px}.rules p{color:#ddd;margin:6px 0}
+.list{width:min(500px,94vw)}.choice{width:100%;background:#252527;color:#fff;border:1px solid #444;border-radius:13px;padding:14px;margin:5px 0}.choice.active{border-color:#fff}
+.busWrap{width:min(1000px,96vw);margin:8px auto;text-align:center}
+.busTitle{font-size:20px;font-weight:800;margin-bottom:10px}
+.busTable{position:relative;width:100%;height:150px;display:flex;align-items:center;justify-content:center}
+.busPlayed,.busCurrent,.busFresh{display:flex;align-items:center;position:relative;height:112px}
+.busPlayed{width:180px;justify-content:flex-start;overflow:visible}
+.busPlayed .bus-card{margin-left:-42px}
+.busPlayed .bus-card:first-child{margin-left:0}
+.busCurrent{width:82px;justify-content:center;z-index:5}
+.busFresh{gap:7px;justify-content:flex-start;overflow:visible}
+.bus-card{flex:0 0 72px;width:72px;height:102px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px #000}
+.bus-card.up{background:#fafafa;color:#111}
+.bus-card.down{background:linear-gradient(135deg,#333,#111);border:1px solid #777;color:#aaa;font-size:28px;font-weight:900}
+.bus-card.revealed{transform:scale(1.03);transition:transform .2s}
 .busScreen .choice{padding:10px;margin:4px 0}
 .busScreen .small{margin:6px 0}
 @media (orientation:landscape){
@@ -206,20 +255,22 @@ function chooseBusfahrerPlayer(){
 
 function startBusfahrer(p){
  loser=p;
- loserDeck=newDeck();                 // exactly one shuffle at the start
+ loserDeck=newDeck();          // shuffle exactly once when Busfahrer starts
  loserCorrect=0;
  loserUsed=0;
- loserCurrent=loserDeck.shift();
  busBusy=false;
- busRoundStart=loserCurrent;
- busRoundCount=6;
  busPlayed=[];
- loserFreshCards=[];
+ loserCurrent=loserDeck.shift(); // first open card
+ loserUsed=1;
 
+ // Always begin with exactly six hidden cards.
+ loserFreshCards=[];
  for(let i=0;i<6 && loserDeck.length;i++){
    loserFreshCards.push(loserDeck.shift());
+   loserUsed++;
  }
- loserUsed=1+loserFreshCards.length;
+ busRoundStart=loserCurrent;
+ busRoundCount=6;
  renderBusfahrer();
 }
 
@@ -229,10 +280,7 @@ function busCardHTML(c,faceDown=false){
 }
 
 function renderBusfahrer(){
- setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status"></div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busTable"><div class="busPlayed" id="busPlayed"></div><div class="busCurrent" id="busCurrent"></div><div class="busFresh" id="busFresh"></div></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Wähle Hoch oder Tief.</div></div>');
-
- const played=document.getElementById("busPlayed");
- busPlayed.forEach(c=>played.insertAdjacentHTML("beforeend",busCardHTML(c,false)));
+ setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status"></div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busTable"><div class="busCurrent" id="busCurrent"></div><div class="busFresh" id="busFresh"></div></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Wähle Hoch oder Tief.</div></div>');
 
  document.getElementById("busCurrent").innerHTML=busCardHTML(loserCurrent,false);
 
@@ -252,29 +300,17 @@ function renderBusfahrer(){
    loserFreshCards.length+" verdeckte Karten · "+loserUsed+" von 32 Karten verwendet";
 }
 
-function busFinishIfNoCards(){
- if(loserFreshCards.length===0 && loserDeck.length===0){
-   alert("Das komplette 32-Karten-Deck ist aufgebraucht. Busfahrer geschafft!");
-   home();
-   return true;
- }
- return false;
-}
-
 function busGuess(g){
  if(busBusy || loserFreshCards.length===0) return;
  busBusy=true;
 
- // The next card is consumed from the fixed, already-shuffled deck.
+ // Reveal exactly the next hidden card.
  const next=loserFreshCards.shift();
- loserUsed++;
-
  const a=value(next.r);
  const b=value(loserCurrent.r);
 
- // EQUAL: 1 sip. The equal card is used. Put one NEW card face-down
- // on the same comparison position. Do not change the comparison card
- // and do not reshuffle.
+ // Equal: 1 sip. The equal card is used up, but the previous
+ // comparison card stays open. Put one fresh card face-down on it.
  if(a===b){
    busPlayed.push(next);
    if(loserDeck.length){
@@ -282,35 +318,33 @@ function busGuess(g){
      loserUsed++;
      busBusy=false;
      renderBusfahrer();
+     alert("Gleichstand – 1 Schluck.");
      return;
    }
    busBusy=false;
-   busFinishIfNoCards();
+   alert("Gleichstand – 1 Schluck. Keine Karten mehr.");
+   home();
    return;
  }
 
- const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
+ const correct=(g==="Hoch" && a>b) || (g==="Tief" && a<b);
 
- if(ok){
-   // The revealed card becomes the new comparison card.
+ if(correct){
+   // The revealed card becomes the new open card.
    busPlayed.push(loserCurrent);
    loserCurrent=next;
    loserCorrect++;
-   busRoundCount--;
 
-   // If all cards in this row were correct, lay out the next six cards
-   // from the SAME deck. No reshuffle.
+   // If the six-card row is finished, create a new six-card row
+   // from the SAME shuffled deck.
    if(loserFreshCards.length===0){
      if(loserDeck.length===0){
-       busBusy=false;
-       alert("Das komplette 32-Karten-Deck ist aufgebraucht. Busfahrer geschafft!");
+       alert("Busfahrer geschafft – das komplette Deck ist durchgespielt!");
        home();
        return;
      }
-
      busRoundStart=loserCurrent;
      busRoundCount=Math.min(6,loserDeck.length);
-     loserFreshCards=[];
      for(let i=0;i<busRoundCount;i++){
        loserFreshCards.push(loserDeck.shift());
        loserUsed++;
@@ -322,20 +356,19 @@ function busGuess(g){
    return;
  }
 
- // WRONG: the number of cards revealed in this row determines both
- // the number of new cards and the number of sips.
- const revealedCount=Math.max(1,busRoundCount-loserFreshCards.length);
+ // Wrong: count how many cards of the current row have been revealed.
+ const revealedThisRound=Math.max(1,busRoundCount-loserFreshCards.length);
+ const newCount=Math.min(revealedThisRound,loserDeck.length);
 
- // Keep the revealed cards visible in the Solitaire-like played pile.
  busPlayed.push(loserCurrent);
  busPlayed.push(next);
 
- const newCount=Math.min(revealedCount,loserDeck.length);
+ // Go back to the first open card of this round.
  loserCurrent=busRoundStart;
  loserCorrect=0;
- loserFreshCards=[];
 
- // No reshuffle here: take the next cards from the existing deck.
+ // Replace the cards that were revealed in this round with new
+ // face-down cards. The cards that were still face-down remain.
  for(let i=0;i<newCount;i++){
    loserFreshCards.push(loserDeck.shift());
    loserUsed++;
@@ -343,20 +376,20 @@ function busGuess(g){
 
  busBusy=false;
 
- alert("Falsch – "+revealedCount+" Schlücke. "+newCount+" neue Karten werden ausgelegt.");
-
  if(newCount===0){
-   alert("Das 32-Karten-Deck ist aufgebraucht. Busfahrer beendet.");
+   alert("Falsch – "+revealedThisRound+" Schlücke. Keine Karten mehr.");
    home();
    return;
  }
 
- busRoundCount=newCount;
+ // The row keeps its original number of card positions.
+ busRoundCount=loserFreshCards.length;
  renderBusfahrer();
+ alert("Falsch – "+revealedThisRound+" Schlücke. Die aufgedeckten Karten wurden durch neue verdeckte Karten ersetzt.");
 }
 
 function showRules(){
- setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Busfahrer</h3><p>Busfahrer: Das 32-Karten-Deck wird nur zu Beginn neu gemischt. Eine Karte liegt offen, sechs Karten liegen verdeckt bereit. Hoch oder Tief entscheidet die nächste Karte. Bei richtiger Antwort geht es mit der nächsten verdeckten Karte weiter. Bei falscher Antwort werden so viele neue Karten ausgelegt, wie in dieser Runde aufgedeckt wurden, und genauso viele Schlücke getrunken. Bei Gleichstand: 1 Schluck; die gleiche Karte ist verbraucht und eine neue Karte wird verdeckt auf die letzte offene Karte gelegt. Während Busfahrer läuft wird niemals neu gemischt.</p></div></div>');
+ setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Busfahrer</h3><p>Busfahrer wird beim 4. König gestartet oder kann einzeln gewählt werden. Zu Beginn wird das Deck einmal gemischt. 1 offene Karte + 6 verdeckte Karten. Hoch/Tief: richtige Antwort = nächste Karte. Falsch = zurück zur ersten offenen Karte der Runde, so viele neue Karten wie aufgedeckt wurden und genauso viele Schlücke. Gleichstand = 1 Schluck und eine neue Karte verdeckt auf die letzte offene Karte. Während des Spiels wird nicht neu gemischt.</p></div></div>');
  const s=document.querySelector(".screen");s.append(makeButton("Zurück",players.length?renderMain:home,true));
 }
 
