@@ -187,7 +187,7 @@ h2{margin:12px 0 20px}
 const SUITS=[["♥","red"],["♦","red"],["♣","black"],["♠","black"]];
 const RANKS=["7","8","9","10","B","D","K","A"];
 let players=[],current=0,deck=[],revealed=null,kingCount=0,kingHolder=null,activeDame=null;
-let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0,loserUsed=0,loserFreshCards=[],busBusy=false,busRoundStart=null,busRoundIndex=0,busRoundCount=0,busPlayed=[];
+let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0,loserUsed=0,loserFreshCards=[],busBusy=false,busRoundStart=null,busRoundIndex=0,busRoundCount=0,busPlayed=[],busHistory=[];
 
 function setApp(html){document.getElementById("app").innerHTML=html}
 function makeButton(text,fn,dark=false){const b=document.createElement("button");b.className="btn"+(dark?" dark":"");b.textContent=text;b.onclick=fn;return b}
@@ -327,6 +327,7 @@ function startBusfahrer(p){
 
  // The first open card of the current round.
  busRoundStart=loserCurrent;
+ busHistory=[loserCurrent];
 
  renderBusfahrer();
 }
@@ -337,14 +338,30 @@ function busCardHTML(c,faceDown=false){
 }
 
 function renderBusfahrer(){
- setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status"></div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busTable"><div class="busCurrent" id="busCurrent"></div><div class="busFresh" id="busFresh"></div></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Nächste Karte ist festgelegt.</div></div>');
+ setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status"></div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busTable" id="busTable"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Die Kartenreihenfolge bleibt fest.</div></div>');
 
- document.getElementById("busCurrent").innerHTML=busCardHTML(loserCurrent,false);
+ const table=document.getElementById("busTable");
 
- const fresh=document.getElementById("busFresh");
- // Only the cards that have NOT yet been revealed are shown face-down.
- loserFreshCards.slice(busRoundIndex).forEach(c=>{
-   fresh.insertAdjacentHTML("beforeend",busCardHTML(c,true));
+ // EXACTLY 7 cards are always visible:
+ // revealed cards from left to right, then the remaining hidden cards.
+ const visible=[];
+ for(const c of busHistory) visible.push({c,down:false});
+
+ for(let i=busRoundIndex;i<6;i++){
+   visible.push({c:loserFreshCards[i],down:true});
+ }
+
+ // Safety: always exactly seven slots.
+ while(visible.length<7 && loserDeck.length){
+   visible.push({c:loserDeck[0],down:true});
+ }
+ visible.length=7;
+
+ visible.forEach((item,i)=>{
+   const el=document.createElement("div");
+   el.className="bus-slot";
+   el.innerHTML=busCardHTML(item.c,item.down);
+   table.appendChild(el);
  });
 
  const choices=document.getElementById("busChoices");
@@ -356,7 +373,7 @@ function renderBusfahrer(){
    choices.append(b);
  });
 
- const hidden=loserFreshCards.length-busRoundIndex;
+ const hidden=6-busRoundIndex;
  document.getElementById("busProgress").textContent =
    hidden+" verdeckte Karten · "+loserUsed+" von 32 Karten verwendet";
 }
@@ -376,6 +393,7 @@ function busNewRound(){
  }
  busRoundIndex=0;
  busRoundStart=loserCurrent;
+ busHistory=[loserCurrent];
  return true;
 }
 
@@ -415,6 +433,7 @@ function busGuess(g){
  if(correct){
    // That exact hidden card becomes the new open comparison card.
    loserCurrent=next;
+   busHistory.push(next);
    busRoundIndex++;
    loserCorrect++;
 
@@ -439,6 +458,7 @@ function busGuess(g){
  // Go back to the first open card of this row.
  loserCurrent=busRoundStart;
  loserCorrect=0;
+ busHistory=[busRoundStart];
 
  // The first 'revealedCount' positions are replaced by NEW hidden cards.
  // The cards that were never reached remain in their original positions.
