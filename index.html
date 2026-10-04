@@ -41,6 +41,24 @@ h2{margin:12px 0 20px}
 .bus-card .rank{font-size:34px;font-weight:900;line-height:1}
 .bus-card .suit{font-size:34px;line-height:1;margin-top:5px}
 
+
+/* Busfahrer – die frühere funktionierende Version */
+.busLegacy{width:100%;}
+.busLegacy .busTop{text-align:center;position:relative}
+.busLegacy .busTitle{font-size:28px;font-weight:900;margin:5px}
+.busLegacy .busInfo{opacity:.75;font-size:14px}
+.busLegacy .busBoard{height:260px;display:flex;align-items:center;justify-content:center;gap:5px;margin:18px auto;overflow:visible;width:100%;padding:0 8px}
+.busLegacy .busSlot{width:45px;height:68px;position:relative;flex:0 0 45px}
+.busLegacy .busCard{position:absolute;width:45px;height:68px;border-radius:8px;border:2px solid #333;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;box-shadow:0 4px 10px #0008}
+.busLegacy .busCard.back{background:#8b1111;color:#fff}
+.busLegacy .busCard.layer{transform:translate(4px,-3px) rotate(1.5deg)}
+.busLegacy .busCard.layer2{transform:translate(8px,-5px) rotate(-1.5deg)}
+.busLegacy .choiceRow{display:flex;gap:12px;justify-content:center}
+.busLegacy .choiceRow .btn{width:45%}
+.busLegacy .equalBtn{display:block;margin:10px auto 0;width:92%;background:#333}
+.busLegacy .drink{text-align:center;font-size:17px;font-weight:800;min-height:25px}
+.busLegacy .sequence{font-size:12px;opacity:.6;text-align:center}
+
 </style>
 </head>
 <body>
@@ -50,6 +68,7 @@ const SUITS=[["♥","red"],["♦","red"],["♣","black"],["♠","black"]];
 const RANKS=["7","8","9","10","B","D","K","A"];
 let players=[],current=0,deck=[],revealed=null,kingCount=0,kingHolder=null,activeDame=null;
 let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0,loserUsed=0,loserFreshCards=[];
+let bus={player:'',deck:[],slots:[],revealed:1,streak:0,message:'',active:true};
 
 function setApp(html){document.getElementById("app").innerHTML=html}
 function makeButton(text,fn,dark=false){const b=document.createElement("button");b.className="btn"+(dark?" dark":"");b.textContent=text;b.onclick=fn;return b}
@@ -153,136 +172,88 @@ function chooseBusfahrerPlayer(){
  document.getElementById("back").append(makeButton("Zurück",home,true));
 }
 
-function startBusfahrer(p){
- loser=p;
- loserDeck=newDeck();
- loserCorrect=0;
- loserUsed=0;
- busBusy=false;
- busSlots=[];
- busRevealed=1;
- // 1 offene Startkarte + 6 verdeckte Karten.
- for(let i=0;i<7 && loserDeck.length;i++) busSlots.push(loserDeck.shift());
- loserUsed=busSlots.length;
- loserCurrent=busSlots[0];
- renderBusfahrer();
+function startBusfahrer(name){
+ bus.player=name;
+ bus.deck=newDeck();
+ bus.slots=[bus.deck.shift()];
+ for(let i=1;i<7;i++) bus.slots.push(bus.deck.shift());
+ bus.revealed=1;
+ bus.streak=0;
+ bus.message='';
+ bus.active=true;
+ renderBus();
 }
 
-function busRankValue(r){
- return RANKS.indexOf(r)+7;
+function startBusfahrerStandalone(){startBusfahrer('Busfahrer')}
+
+function compareBus(a,b){
+ const av=RANKS.indexOf(a.r), bv=RANKS.indexOf(b.r);
+ return bv>av?'high':bv<av?'low':'equal';
 }
 
-function busCardHTML(c,faceDown=false,extraClass=''){
- if(faceDown) return '<div class="bus-card down '+extraClass+'">?</div>';
- return '<div class="bus-card up '+extraClass+'"><div class="rank">'+c.r+'</div><div class="suit '+c.c+'">'+c.s+'</div></div>';
-}
-
-function renderBusfahrer(){
- setApp('<div class="screen busScreen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status">'+loser+'</div></div><div class="busWrap"><div class="busTitle">Busfahrer</div><div class="busRow" id="busRow"></div></div><p class="small">Hoch oder Tief?</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small">Die nächste verdeckte Karte wird aufgedeckt.</div></div>');
- const row=document.getElementById("busRow");
- for(let i=0;i<7;i++){
-   const c=busSlots[i];
-   if(!c) continue;
-   const open=i<busRevealed;
-   const wrap=document.createElement('div');
-   wrap.style.position='relative';
-   wrap.style.width='45px';
-   wrap.style.height='68px';
-   wrap.style.flex='0 0 45px';
-   wrap.innerHTML=open?busCardHTML(c,false,i===busRevealed-1 && busBusy?'revealed':''):busCardHTML(c,true);
-   row.appendChild(wrap);
- }
- const choices=document.getElementById("busChoices");
- ["Hoch","Tief"].forEach(v=>{
-   const b=document.createElement("button");
-   b.className="choice";
-   b.textContent=v;
-   b.disabled=busBusy || busRevealed>=7;
-   b.onclick=()=>busGuess(v);
-   choices.append(b);
- });
- document.getElementById("busProgress").textContent=loserCorrect+" von 6 richtig · "+loserUsed+" von 32 Karten verwendet";
+function confirmBusEnd(){
+ if(confirm('Busfahrer wirklich beenden?')) home();
 }
 
 function busGuess(g){
- if(busBusy || busRevealed>=7) return;
- const nextIndex=busRevealed;
- const next=busSlots[nextIndex];
- const current=busSlots[busRevealed-1];
- if(!next || !current) return;
- busBusy=true;
- busRevealed++;
- loserCurrent=next;
- renderBusfahrer();
+ if(!bus.active) return;
+ const next=bus.slots[bus.revealed];
+ if(!next){finishBus();return;}
+ const current=bus.slots[bus.revealed-1];
+ const res=compareBus(current,next);
+ bus.revealed++;
 
- setTimeout(()=>{
-   const a=busRankValue(next.r);
-   const b=busRankValue(current.r);
+ if(res===g){
+   bus.streak++;
+   bus.message='Richtig!';
+   renderBus();
+   if(bus.streak>=6){finishBus();return;}
+   if(bus.deck.length===0){finishBus();}
+   return;
+ }
 
-   // Gleichstand: 1 Schluck. Die gerade aufgedeckte Position wird sofort ersetzt;
-   // die aktuelle offene Vergleichskarte bleibt bestehen.
-   if(a===b){
-     document.getElementById("busInfo").textContent="Gleichstand – 1 Schluck. Neue Karte wird gelegt.";
-     loserCorrect=0;
-     if(loserDeck.length){
-       busSlots[nextIndex]=loserDeck.shift();
-       loserUsed++;
-     }else{
-       busBusy=false;
-       setTimeout(()=>{alert("Das 32-Karten-Deck ist aufgebraucht.");home();},500);
-       return;
-     }
-     busRevealed=nextIndex;
-     loserCurrent=busSlots[nextIndex-1];
-     busBusy=false;
-     setTimeout(renderBusfahrer,500);
-     return;
-   }
+ const drinks=bus.revealed-1;
+ bus.streak=0;
+ bus.message=`Falsch! ${drinks} Schlücke.`;
 
-   const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
+ for(let i=1;i<bus.revealed;i++){
+   if(bus.deck.length===0) break;
+   bus.slots[i]=bus.deck.shift();
+ }
+ bus.revealed=1;
+ renderBus();
+ if(bus.deck.length===0){finishBus();}
+}
 
-   if(ok){
-     loserCorrect++;
-     loserCurrent=next;
+function busEqual(){
+ if(!bus.active) return;
+ bus.message='Gleich – 1 Schluck.';
+ bus.streak=0;
+ if(bus.deck.length===0){renderBus();finishBus();return;}
+ bus.slots[bus.revealed-1]=bus.deck.shift();
+ renderBus();
+}
 
-     if(loserCorrect>=6){
-       busBusy=false;
-       document.getElementById("busInfo").textContent="6 richtige in Folge – Busfahrer geschafft!";
-       document.querySelectorAll("#busChoices button").forEach(b=>b.disabled=true);
-       setTimeout(home,900);
-       return;
-     }
+function renderBus(){
+ setApp('<div class="screen busLegacy"><div class="busTop"><button class="back" style="position:absolute;left:10px;top:8px" onclick="confirmBusEnd()">‹</button><div class="busTitle">Busfahrer</div><div id="busPlayer" class="busInfo"></div></div><div id="busBoard" class="busBoard"></div><div id="busPrompt" class="drink"></div><div class="choiceRow"><button class="btn primary" onclick="busGuess(\'high\')" '+(!bus.active?'disabled':'')+'>HOCH</button><button class="btn primary" onclick="busGuess(\'low\')" '+(!bus.active?'disabled':'')+'>TIEF</button></div><button class="btn equalBtn" onclick="busEqual()" '+(!bus.active?'disabled':'')+'>GLEICH</button><p class="sequence" id="busSequence"></p></div>');
+ const board=document.getElementById('busBoard');
+ board.innerHTML='';
+ for(let i=0;i<7;i++){
+   const slot=document.createElement('div'); slot.className='busSlot';
+   const card=document.createElement('div');
+   card.className='busCard '+(i<bus.revealed?'':'back');
+   card.textContent=i<bus.revealed ? (bus.slots[i].r+bus.slots[i].s) : '';
+   slot.appendChild(card); board.appendChild(slot);
+ }
+ document.getElementById('busPlayer').textContent=bus.player;
+ document.getElementById('busPrompt').textContent=bus.message;
+ document.getElementById('busSequence').textContent=`${bus.streak} von 6 richtig · ${bus.deck.length} Karten verbleiben`;
+}
 
-     busBusy=false;
-     setTimeout(renderBusfahrer,500);
-     return;
-   }
-
-   // Falsch: die erste Startkarte zählt nicht als Schluck.
-   const drinks=busRevealed-1;
-   loserCorrect=0;
-   busBusy=true;
-   document.getElementById("busInfo").textContent="Falsch – "+drinks+" Schlücke.";
-
-   setTimeout(()=>{
-     // Alle bereits aufgedeckten Positionen außer der ersten bekommen neue verdeckte Karten.
-     for(let i=1;i<busRevealed;i++){
-       if(!loserDeck.length) break;
-       busSlots[i]=loserDeck.shift();
-       loserUsed++;
-     }
-     loserCurrent=busSlots[0];
-     busRevealed=1;
-     busBusy=false;
-
-     if(loserDeck.length===0 && loserUsed>=32){
-       renderBusfahrer();
-       setTimeout(()=>{alert("Das 32-Karten-Deck ist aufgebraucht.");home();},700);
-       return;
-     }
-     renderBusfahrer();
-   },700);
- },700);
+function finishBus(){
+ bus.active=false;
+ bus.message=bus.streak>=6 ? 'Busfahrer geschafft!' : 'Alle 32 Karten wurden verwendet.';
+ renderBus();
 }
 
 function showRules(){
