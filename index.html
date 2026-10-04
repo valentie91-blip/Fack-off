@@ -95,102 +95,97 @@ function startBusfahrer(name){
   for(let s of suits)for(let r of ranks)bus.deck.push({r,s});
   for(let i=bus.deck.length-1;i>0;i--){
     let j=Math.floor(Math.random()*(i+1));
-    [bus.deck[i],bus.deck[j]]=[bus.deck[j],bus.deck[i]]
+    [bus.deck[i],bus.deck[j]]=[bus.deck[j],bus.deck[i]];
   }
-  // Die erste Karte ist immer die sichtbare Startkarte.
+
+  // 1 offene Startkarte + 6 verdeckte Karten.
   bus.slots=[bus.deck.shift()];
-  // Die nächsten sechs Karten werden verdeckt ausgelegt.
-  for(let i=1;i<7;i++)bus.slots.push(bus.deck.shift());
+  for(let i=1;i<7;i++) bus.slots.push(bus.deck.shift());
+
   bus.revealed=1;
   bus.streak=0;
   bus.message='';
   bus.active=true;
-  bus.wrongPause=false;
-  hideAll();busGame.classList.remove('hidden');renderBus()
+  hideAll();
+  busGame.classList.remove('hidden');
+  renderBus();
 }
-function startBusfahrerStandalone(){startBusfahrer('Busfahrer')}
-function compare(a,b){
-  let av=ranks.indexOf(a.r),bv=ranks.indexOf(b.r);
-  return bv>av?'high':bv<av?'low':'equal'
-}
-function busGuess(g){
-  if(!bus.active || bus.wrongPause)return;
 
-  // Es wird immer die nächste verdeckte Karte auf ihrer festen Position aufgedeckt.
+function startBusfahrerStandalone(){startBusfahrer('Busfahrer')}
+
+function compare(a,b){
+  let av=ranks.indexOf(a.r), bv=ranks.indexOf(b.r);
+  return bv>av?'high':bv<av?'low':'equal';
+}
+
+function busGuess(g){
+  if(!bus.active)return;
+
+  // Nächste verdeckte Karte an genau ihrer Position aufdecken.
   let next=bus.slots[bus.revealed];
-  if(!next){finishBus();return}
+  if(!next){
+    finishBus();
+    return;
+  }
 
   let current=bus.slots[bus.revealed-1];
   let res=compare(current,next);
 
   bus.revealed++;
+
   if(res===g){
     bus.streak++;
     bus.message='Richtig!';
     renderBus();
 
-    // Sechs richtige hintereinander = geschafft.
+    // Erst nach 6 richtigen hintereinander ist der Busfahrer geschafft.
     if(bus.streak>=6){
-      setTimeout(()=>finishBus(),1200);
+      finishBus();
       return;
     }
 
-    // Falls keine weitere Karte zum Auslegen vorhanden ist, endet das Spiel.
-    if(bus.deck.length===0 && bus.revealed>=7){
-      setTimeout(()=>finishBus(),1200);
+    // Sind keine Karten mehr im Nachziehstapel, ist das Spiel vorbei.
+    if(bus.deck.length===0){
+      finishBus();
     }
     return;
   }
 
-  // Falsch: Startkarte zählt NICHT als Schluck.
-  // Die Anzahl der aufgedeckten Karten minus die erste Karte.
+  // Falsch: die erste Startkarte zählt NICHT als Schluck.
   const drinks=bus.revealed-1;
   bus.streak=0;
   bus.message=`Falsch! ${drinks} Schlücke.`;
 
-  // Erst 3 Sekunden lang die gerade aufgedeckte Karte zeigen.
-  bus.wrongPause=true;
+  // Alle bisher aufgedeckten Positionen außer der ersten
+  // bekommen neue verdeckte Karten.
+  for(let i=1;i<bus.revealed;i++){
+    if(bus.deck.length===0) break;
+    bus.slots[i]=bus.deck.shift();
+  }
+
+  // Danach immer wieder ganz vorne bei der ersten Karte beginnen.
+  bus.revealed=1;
   renderBus();
 
-  setTimeout(()=>{
-    // Für jede aufgedeckte Karte außer der ersten kommt eine neue
-    // verdeckte Karte. Die erste Startkarte bleibt sichtbar.
-    for(let i=1;i<bus.revealed;i++){
-      if(bus.deck.length===0)break;
-      bus.slots[i]=bus.deck.shift();
-    }
-
-    // Nach einem Fehler immer wieder von vorne beginnen.
-    bus.revealed=1;
-    bus.wrongPause=false;
-    bus.message=`Falsch! ${drinks} Schlücke.`;
-    renderBus();
-
-    if(bus.deck.length===0 && bus.revealed===1){
-      // Wenn wirklich keine Karten mehr nachgelegt werden können,
-      // ist das Spiel beendet.
-      finishBus();
-    }
-  },3000);
+  if(bus.deck.length===0){
+    finishBus();
+  }
 }
 
 function busEqual(){
-  if(!bus.active || bus.wrongPause)return;
+  if(!bus.active)return;
 
-  // Gleichstand: 1 Schluck und eine neue Karte verdeckt
-  // auf die Position der letzten offenen Karte.
-  const drinks=1;
-  if(bus.deck.length===0){
-    bus.message='Gleich – 1 Schluck.';
-    renderBus();
-    setTimeout(()=>finishBus(),1200);
-    return;
-  }
-
+  // Gleichstand: 1 Schluck.
   bus.message='Gleich – 1 Schluck.';
   bus.streak=0;
 
-  // Die letzte offene Position wird mit einer neuen verdeckten Karte ersetzt.
+  // Eine neue verdeckte Karte kommt auf die Position der letzten offenen Karte.
+  if(bus.deck.length===0){
+    renderBus();
+    finishBus();
+    return;
+  }
+
   bus.slots[bus.revealed-1]=bus.deck.shift();
   renderBus();
 }
@@ -219,11 +214,13 @@ function renderBus(){
 
 function finishBus(){
   bus.active=false;
-  bus.wrongPause=false;
-  bus.message=bus.streak>=6?'Busfahrer geschafft!':'Alle Karten wurden verwendet.';
+  bus.message=bus.streak>=6
+    ? 'Busfahrer geschafft!'
+    : 'Alle 32 Karten wurden verwendet.';
   renderBus();
+
   document.querySelectorAll('#busGame .choice button,#busGame .equalBtn')
-    .forEach(b=>b.disabled=true)
+    .forEach(b=>b.disabled=true);
 }
 </script>
 </body></html>
