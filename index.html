@@ -32,6 +32,16 @@ h2{margin:12px 0 20px}
 .big .rank{font-size:78px;font-weight:900}.big .suit{font-size:70px}.big .action{font-size:19px;font-weight:700;text-align:center;padding:18px}
 .rules{width:min(720px,96vw);line-height:1.45}.rules h3{margin:20px 0 5px}.rules p{color:#ddd;margin:6px 0}
 .list{width:min(500px,94vw)}.choice{width:100%;background:#252527;color:#fff;border:1px solid #444;border-radius:13px;padding:14px;margin:5px 0}.choice.active{border-color:#fff}
+.busWrap{width:min(720px,96vw);margin:18px auto;text-align:center}
+.busTitle{font-size:20px;font-weight:800;margin-bottom:16px}
+.busRow{display:flex;justify-content:center;gap:10px;min-height:112px}
+.busNew{display:flex;justify-content:center;gap:8px;margin-top:18px;min-height:82px}
+.bus-card{width:74px;height:106px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px #000}
+.bus-card.up{background:#fafafa;color:#111}
+.bus-card.down{background:linear-gradient(135deg,#333,#111);border:1px solid #777;color:#aaa;font-size:28px;font-weight:900}
+.bus-card .rank{font-size:34px;font-weight:900;line-height:1}
+.bus-card .suit{font-size:34px;line-height:1;margin-top:5px}
+
 </style>
 </head>
 <body>
@@ -40,14 +50,17 @@ h2{margin:12px 0 20px}
 const SUITS=[["♥","red"],["♦","red"],["♣","black"],["♠","black"]];
 const RANKS=["7","8","9","10","B","D","K","A"];
 let players=[],current=0,deck=[],revealed=null,kingCount=0,kingHolder=null,activeDame=null;
-let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0;
+let loser=null,loserDeck=[],loserCurrent=null,loserCorrect=0,loserUsed=0,loserFreshCards=[];
 
 function setApp(html){document.getElementById("app").innerHTML=html}
 function makeButton(text,fn,dark=false){const b=document.createElement("button");b.className="btn"+(dark?" dark":"");b.textContent=text;b.onclick=fn;return b}
 
 function home(){
  setApp('<div class="screen"><h1>Fack Off</h1><div id="homeButtons"></div><p class="small">Testversion</p></div>');
- const b=document.getElementById("homeButtons");b.append(makeButton("Neues Spiel",setup));b.append(makeButton("Regeln",showRules,true));
+ const b=document.getElementById("homeButtons");
+ b.append(makeButton("Neues Spiel",setup));
+ b.append(makeButton("Busfahrer",busfahrerSetup));
+ b.append(makeButton("Regeln",showRules,true));
 }
 
 function setup(){
@@ -111,29 +124,150 @@ function showBig(c,done){
 function clearDame(){activeDame=null;renderMain()}
 
 function chooseLoser(){
- setApp('<div class="screen"><h2>Wer hat verloren?</h2><p class="small">Der Spieler, der laut der gespielten Bube-Regel verloren hat.</p><div id="loserList" class="list"></div><div id="back"></div></div>');
- const l=document.getElementById("loserList");players.forEach(p=>{const b=document.createElement("button");b.className="choice";b.textContent=p;b.onclick=()=>startLoser(p);l.append(b)});
+ setApp('<div class="screen"><h2>Busfahrer</h2><p class="small">Der 4. König ist gezogen. Jetzt wird der Verlierer bestimmt.</p><p class="small">Wer laut der gespielten Bube-Regel verloren hat, spielt Busfahrer.</p><div id="loserList" class="list"></div><div id="back"></div></div>');
+ const l=document.getElementById("loserList");
+ players.forEach(p=>{
+   const b=document.createElement("button");
+   b.className="choice";
+   b.textContent=p;
+   b.onclick=()=>startBusfahrer(p);
+   l.append(b);
+ });
  document.getElementById("back").append(makeButton("Hauptmenü",home,true));
 }
 
-function startLoser(p){loser=p;loserDeck=newDeck();loserCorrect=0;loserCurrent=loserDeck.shift();renderLoser()}
-function value(r){return RANKS.indexOf(r)}
-function renderLoser(){
- setApp('<div class="screen"><h2>Verlierer-Spiel</h2><p>'+loser+' ist dran</p><div style="margin:30px;font-size:100px;font-weight:900">'+loserCurrent.r+loserCurrent.s+'</div><p class="small">Kommt die nächste Karte höher oder tiefer?</p><div class="list" id="choices"></div><p id="progress" class="small"></p></div>');
- const c=document.getElementById("choices");["Hoch","Tief"].forEach(v=>{const b=document.createElement("button");b.className="choice";b.textContent=v;b.onclick=()=>guess(v);c.append(b)});document.getElementById("progress").textContent=loserCorrect+" von 6 richtig";
+function busfahrerSetup(){
+ setApp('<div class="screen"><h2>Busfahrer</h2><p class="small">2–8 Spieler</p><div id="names"></div><div id="start"></div><div id="back"></div></div>');
+ const names=document.getElementById("names");
+ for(let i=0;i<8;i++){
+   const x=document.createElement("input");
+   x.className="input";
+   x.placeholder="Spieler "+(i+1);
+   x.id="bp"+i;
+   if(i>1)x.style.display="none";
+   names.append(x);
+ }
+ const row=document.createElement("div");
+ row.className="row";
+ for(let n=2;n<=8;n++){
+   const b=document.createElement("button");
+   b.className="choice"+(n===2?" active":"");
+   b.textContent=n+" Spieler";
+   b.onclick=()=>{
+     document.querySelectorAll("#names .input").forEach((x,i)=>x.style.display=i<n?"block":"none");
+     document.querySelectorAll(".choice").forEach(x=>x.classList.remove("active"));
+     b.classList.add("active");
+   };
+   row.append(b);
+ }
+ names.prepend(row);
+ document.getElementById("start").append(makeButton("Busfahrer starten",()=>{
+   const ps=[];
+   for(let i=0;i<8;i++){
+     const x=document.getElementById("bp"+i);
+     if(x.style.display!=="none") ps.push(x.value.trim()||"Spieler "+(i+1));
+   }
+   if(ps.length===1) ps.push("Spieler 2");
+   players=ps;
+   setTimeout(()=>chooseBusfahrerPlayer(),0);
+ }));
+ document.getElementById("back").append(makeButton("Zurück",home,true));
 }
-function guess(g){
- if(!loserDeck.length){alert("Alle 32 Karten wurden verwendet.");home();return}
- const next=loserDeck.shift(),a=value(next.r),b=value(loserCurrent.r);
- if(a===b){alert("Gleich hoch – 1 Schluck. Diese Karte wird ersetzt.");renderLoser();return}
+
+function chooseBusfahrerPlayer(){
+ setApp('<div class="screen"><h2>Wer fährt Bus?</h2><p class="small">Wähle den Spieler für das Busfahrer-Spiel.</p><div id="busList" class="list"></div><div id="back"></div></div>');
+ const l=document.getElementById("busList");
+ players.forEach(p=>{
+   const b=document.createElement("button");
+   b.className="choice";
+   b.textContent=p;
+   b.onclick=()=>startBusfahrer(p);
+   l.append(b);
+ });
+ document.getElementById("back").append(makeButton("Zurück",home,true));
+}
+
+function startBusfahrer(p){
+ loser=p;
+ loserDeck=newDeck();
+ loserCorrect=0;
+ loserUsed=0;
+ loserCurrent=loserDeck.shift();
+ loserUsed=1;
+ loserFreshCards=[];
+ for(let i=0;i<6 && loserDeck.length;i++) loserFreshCards.push(loserDeck.shift());
+ loserUsed+=loserFreshCards.length;
+ renderBusfahrer();
+}
+
+function busCardHTML(c,faceDown=false){
+ if(faceDown) return '<div class="bus-card down">?</div>';
+ return '<div class="bus-card up"><div class="rank">'+c.r+'</div><div class="suit '+c.c+'">'+c.s+'</div></div>';
+}
+
+function renderBusfahrer(){
+ setApp('<div class="screen"><div class="top"><button class="backArrow" onclick="endGame()">‹</button><div class="turn">Busfahrer</div><div class="status">'+loser+'</div></div><div class="busWrap"><div class="busTitle">Hoch oder Tief?</div><div class="busRow" id="busRow"></div><div class="busNew" id="busNew"></div></div><p class="small">6 richtige in Folge schaffen.</p><div class="list" id="busChoices"></div><p id="busProgress" class="small"></p><div id="busInfo" class="small"></div></div>');
+ const row=document.getElementById("busRow");
+ row.innerHTML=busCardHTML(loserCurrent,false);
+ const newRow=document.getElementById("busNew");
+ loserFreshCards.forEach(()=>newRow.insertAdjacentHTML("beforeend",busCardHTML(null,true)));
+ const choices=document.getElementById("busChoices");
+ ["Hoch","Tief"].forEach(v=>{
+   const b=document.createElement("button");
+   b.className="choice";
+   b.textContent=v;
+   b.onclick=()=>busGuess(v);
+   choices.append(b);
+ });
+ document.getElementById("busProgress").textContent=loserCorrect+" von 6 richtig · "+loserUsed+" von 32 Karten verwendet";
+ document.getElementById("busInfo").textContent=loserFreshCards.length?"Bei einem Fehler werden 3 neue Karten ausgelegt.":"";
+}
+
+function busGuess(g){
+ if(!loserDeck.length){
+   alert("Alle 32 Karten wurden verwendet. Busfahrer beendet.");
+   home();
+   return;
+ }
+ const next=loserDeck.shift();
+ loserUsed++;
+ const a=value(next.r),b=value(loserCurrent.r);
+
+ if(a===b){
+   alert("Gleichstand – 1 Schluck. Die neue Karte wird wieder verdeckt.");
+   // The equal card is used and stays out. The current comparison card remains.
+   renderBusfahrer();
+   return;
+ }
+
  const ok=(g==="Hoch"&&a>b)||(g==="Tief"&&a<b);
- if(ok){loserCorrect++;loserCurrent=next;if(loserCorrect>=6){alert("6 richtige in Folge – geschafft!");home();return}}
- else{alert("Falsch – 3 Schlücke.");loserCorrect=0;loserCurrent=next}
- renderLoser();
+
+ if(ok){
+   loserCorrect++;
+   loserCurrent=next;
+   // Correct card becomes the new comparison card. One face-down card is consumed.
+   if(loserFreshCards.length) loserFreshCards.shift();
+   if(loserCorrect>=6){
+     alert("6 richtige in Folge – Busfahrer geschafft!");
+     home();
+     return;
+   }
+ }else{
+   alert("Falsch – 3 Schlücke.");
+   loserCorrect=0;
+   loserCurrent=next;
+   // Three fresh face-down cards are laid out after a wrong guess.
+   loserFreshCards=[];
+   for(let i=0;i<3 && loserDeck.length;i++){
+     loserFreshCards.push(loserDeck.shift());
+     loserUsed++;
+   }
+ }
+ renderBusfahrer();
 }
 
 function showRules(){
- setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Verlierer-Spiel</h3><p>Mit einem neuen 32-Karten-Deck. Hoch oder Tief raten. 6 richtige in Folge schaffen. Gleich hoch: 1 Schluck und die Karte wird ersetzt.</p></div></div>');
+ setApp('<div class="screen"><div class="rules"><h2>Regelwerk</h2><h3>7 / 8 / 9</h3><p>Rot: Schlücke verteilen. Schwarz: selbst trinken.</p><h3>10 – Fuckoff</h3><p>Wer eine 10 zieht, wird im gesprochenen Spiel „Fuckoff“ genannt. Wer den echten Namen sagt, trinkt selbst.</p><h3>Bube</h3><p>Eine neue Regel für alle erfinden. Bube-Regeln können sich stapeln.</p><h3>Dame</h3><p>Daumenspiel. Nur eine Dame ist aktiv.</p><h3>König</h3><p>Der König stellt Fragen. Wer antwortet, trinkt. Der 4. König beendet das Hauptspiel.</p><h3>Ass</h3><p>Rot: 4 Schlücke verteilen. Schwarz: 4 Schlücke selbst.</p><h3>Busfahrer</h3><p>Der 4. König aktiviert Busfahrer. Der Verlierer spielt mit einem neu gemischten 32-Karten-Deck. Eine Karte liegt offen, sechs Karten liegen verdeckt bereit. Für jede nächste Karte wird Hoch oder Tief geraten. 6 richtige in Folge schaffen. Falsche Ansage: 3 Schlücke und 3 neue Karten werden ausgelegt. Gleichstand: 1 Schluck; die neue Karte bleibt aus dem Deck und die aktuelle Vergleichskarte bleibt bestehen. Alle gespielten Karten bleiben aus dem verfügbaren Deck.</p></div></div>');
  const s=document.querySelector(".screen");s.append(makeButton("Zurück",players.length?renderMain:home,true));
 }
 
